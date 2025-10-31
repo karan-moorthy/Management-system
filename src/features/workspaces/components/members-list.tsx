@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { ArrowLeft, MoreVerticalIcon } from "lucide-react";
+import { ArrowLeft, MoreVerticalIcon, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { MemberAvatar } from "@/features/members/components/member-avatar";
@@ -23,8 +23,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
+import { InviteMemberModal } from "@/features/invitations/components/invite-member-modal";
+import { useInviteMemberModal } from "@/features/invitations/hooks/use-invite-member-modal";
+
 export const MembersList = () => {
   const workspaceId = useWorkspaceId();
+  const { isOpen, setIsOpen } = useInviteMemberModal();
   const [ConfirmDialog, confirm] = useConfirm(
     "Remove member",
     "This member will be removed from the workspace.",
@@ -57,17 +61,32 @@ export const MembersList = () => {
   };
 
   return (
-    <Card className="size-full border-none shadow-none">
-      <ConfirmDialog />
-      <CardHeader className="flex flex-row items-center gap-x-4 p-7 space-y-0">
-        <Button asChild variant="secondary" size="sm">
-          <Link href={`/workspaces/${workspaceId}`}>
-            <ArrowLeft className="size-4 mr-2" />
-            Back
-          </Link>
-        </Button>
-        <CardTitle className="text-xl font-bold">Members List</CardTitle>
-      </CardHeader>
+    <>
+      <InviteMemberModal
+        open={isOpen}
+        setOpen={setIsOpen}
+        workspaceId={workspaceId}
+      />
+      <Card className="size-full border-none shadow-none">
+        <ConfirmDialog />
+        <CardHeader className="flex flex-row items-center gap-x-4 p-7 space-y-0">
+          <Button asChild variant="secondary" size="sm">
+            <Link href={`/workspaces/${workspaceId}`}>
+              <ArrowLeft className="size-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+          <CardTitle className="text-xl font-bold">Members List</CardTitle>
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={() => setIsOpen(true)}
+            className="ml-auto"
+          >
+            <Plus className="size-4 mr-2" />
+            Add Member
+          </Button>
+        </CardHeader>
       <div className="px-7">
         <DottedSeparator />
       </div>
@@ -128,5 +147,6 @@ export const MembersList = () => {
         ))}
       </CardContent>
     </Card>
+    </>
   );
 };
