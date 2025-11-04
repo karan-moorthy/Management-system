@@ -64,7 +64,7 @@ export const EditTaskForm = ({
     mutate(
       {
         json: values,
-        param: { taskId: initialValues.$id },
+        param: { taskId: initialValues.id },
       },
       {
         onSuccess: () => {

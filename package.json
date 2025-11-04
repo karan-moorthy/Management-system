@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:check": "tsx src/db/check-connection.ts"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.1",
     "@hello-pangea/dnd": "17.0.0",
     "@hono/zod-validator": "^0.4.1",
     "@hookform/resolvers": "^3.9.1",
@@ -26,15 +32,24 @@
     "@radix-ui/react-tabs": "^1.1.1",
     "@tanstack/react-query": "^5.59.19",
     "@tanstack/react-table": "8.20.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.15.6",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "drizzle-kit": "^0.31.6",
+    "drizzle-orm": "^0.44.7",
     "hono": "^4.6.9",
     "lucide-react": "^0.454.0",
     "next": "^14.2.33",
+    "next-auth": "^4.24.13",
     "next-themes": "^0.4.1",
     "node-appwrite": "14.0.0",
     "nuqs": "1.19.1",
+    "pg": "^8.16.3",
+    "postgres": "^3.4.7",
     "react": "^18",
     "react-big-calendar": "1.14.1",
     "react-day-picker": "8.10.1",
@@ -48,6 +63,7 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -59,6 +75,7 @@
     "eslint-config-next": "14.2.14",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

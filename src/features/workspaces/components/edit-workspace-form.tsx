@@ -75,7 +75,7 @@ export const EditWorkspaceForm = ({
     if (!ok) return;
 
     deleteWorkspace(
-      { param: { workspaceId: initialValues.$id } },
+      { param: { workspaceId: initialValues.id } },
       {
         onSuccess: () => {
           window.location.href = "/";
@@ -89,7 +89,7 @@ export const EditWorkspaceForm = ({
 
     if (!ok) return;
 
-    resetInviteCode({ param: { workspaceId: initialValues.$id } });
+    resetInviteCode({ param: { workspaceId: initialValues.id } });
   };
 
   const onSubmit = (values: z.infer<typeof updateWorkspaceSchema>) => {
@@ -98,7 +98,7 @@ export const EditWorkspaceForm = ({
       image: values.image instanceof File ? values.image : "",
     };
 
-    mutate({ form: finalValues, param: { workspaceId: initialValues.$id } });
+    mutate({ form: finalValues, param: { workspaceId: initialValues.id } });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,7 +108,7 @@ export const EditWorkspaceForm = ({
     }
   };
 
-  const fullInviteLink = `${window.location.origin}/workspaces/${initialValues.$id}/join/${initialValues.inviteCode}`;
+  const fullInviteLink = `${window.location.origin}/workspaces/${initialValues.id}/join/${initialValues.inviteCode}`;
 
   const handleCopyInviteLink = () => {
     navigator.clipboard
@@ -128,7 +128,7 @@ export const EditWorkspaceForm = ({
             onClick={
               onCancel
                 ? onCancel
-                : () => router.push(`/workspaces/${initialValues.$id}`)
+                : () => router.push(`/workspaces/${initialValues.id}`)
             }
           >
             <ArrowLeftIcon className="size-4" />

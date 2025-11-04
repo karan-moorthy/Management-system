@@ -1,27 +1,40 @@
-import { Query } from "node-appwrite";
-
-import { createSessionClient } from "@/lib/appwrite";
-import { DATABASE_ID, MEMBERS_ID, WORKSPACES_ID } from "@/config";
+import { db } from "@/db";
+import { workspaces, members } from "@/db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
+import { getCurrent } from "@/features/auth/queries";
 
 export const getWorkspaces = async () => {
-  const { account, databases } = await createSessionClient();
+  try {
+    const user = await getCurrent();
 
-  const user = await account.get();
+    if (!user) {
+      return { documents: [], total: 0 };
+    }
 
-  const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-    Query.equal("userId", user.$id),
-  ]);
+    const userMembers = await db
+      .select()
+      .from(members)
+      .where(eq(members.userId, user.id));
 
-  if (members.total === 0) {
+    if (userMembers.length === 0) {
+      return { documents: [], total: 0 };
+    }
+
+    const workspaceIds = userMembers.map((member) => member.workspaceId);
+
+    if (workspaceIds.length === 0) {
+      return { documents: [], total: 0 };
+    }
+
+    const userWorkspaces = await db
+      .select()
+      .from(workspaces)
+      .where(inArray(workspaces.id, workspaceIds))
+      .orderBy(desc(workspaces.createdAt));
+
+    return { documents: userWorkspaces, total: userWorkspaces.length };
+  } catch (error) {
+    console.error("Error fetching workspaces:", error);
     return { documents: [], total: 0 };
   }
-
-  const workspaceIds = members.documents.map((member) => member.workspaceId);
-
-  const workspaces = await databases.listDocuments(DATABASE_ID, WORKSPACES_ID, [
-    Query.orderDesc("$createdAt"),
-    Query.contains("$id", workspaceIds),
-  ]);
-
-  return workspaces;
 };

@@ -1,12 +1,15 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { deleteCookie, setCookie } from "hono/cookie";
+import { compare, hash } from "bcryptjs";
+import { randomBytes } from "crypto";
 
 import { loginSchema, registerSchema } from "../schemas";
-import { createAdminClient } from "@/lib/appwrite";
-import { ID } from "node-appwrite";
 import { AUTH_COOKIE } from "../constants";
 import { sessionMiddleware } from "@/lib/session-middleware";
+import { db } from "@/db";
+import { users, sessions } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const app = new Hono()
   .get("/current", sessionMiddleware, (c) => {
@@ -17,10 +20,36 @@ const app = new Hono()
   .post("/login", zValidator("json", loginSchema), async (c) => {
     const { email, password } = c.req.valid("json");
 
-    const { account } = await createAdminClient();
-    const session = await account.createEmailPasswordSession(email, password);
+    // Find user by email
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-    setCookie(c, AUTH_COOKIE, session.secret, {
+    if (!user || !user.password) {
+      return c.json({ error: "Invalid email or password" }, 401);
+    }
+
+    // Verify password
+    const isPasswordValid = await compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return c.json({ error: "Invalid email or password" }, 401);
+    }
+
+    // Create session
+    const sessionToken = randomBytes(32).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+    await db.insert(sessions).values({
+      sessionToken,
+      userId: user.id,
+      expires: expiresAt,
+    });
+
+    setCookie(c, AUTH_COOKIE, sessionToken, {
       path: "/",
       httpOnly: true,
       secure: true,
@@ -33,19 +62,41 @@ const app = new Hono()
   .post("/register", zValidator("json", registerSchema), async (c) => {
     const { name, email, password } = c.req.valid("json");
 
-    const { account } = await createAdminClient();
-    await account.create(ID.unique(), email, password, name);
+    // Check if user already exists
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-    // Don't auto-login after registration
-    // User will need to login manually with their credentials
+    if (existingUser) {
+      return c.json({ error: "Email already in use" }, 400);
+    }
+
+    // Hash password
+    const hashedPassword = await hash(password, 10);
+
+    // Create user
+    await db.insert(users).values({
+      name,
+      email,
+      password: hashedPassword,
+    });
 
     return c.json({ success: true });
   })
   .post("/logout", sessionMiddleware, async (c) => {
-    const account = c.get("account");
+    const user = c.get("user");
+    
+    // Get session token from cookie
+    const sessionToken = c.req.raw.headers.get("cookie")?.split(`${AUTH_COOKIE}=`)[1]?.split(";")[0];
+
+    if (sessionToken) {
+      // Delete session from database
+      await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+    }
 
     deleteCookie(c, AUTH_COOKIE);
-    await account.deleteSession("current");
 
     return c.json({ success: true });
   });

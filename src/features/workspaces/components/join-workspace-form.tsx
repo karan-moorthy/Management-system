@@ -35,7 +35,7 @@ export const JoinWorkspaceForm = ({
       { param: { workspaceId }, json: { code: inviteCode } },
       {
         onSuccess: ({ data }) => {
-          router.push(`/workspaces/${data.$id}`);
+          router.push(`/workspaces/${data.id}`);
         },
       }
     );

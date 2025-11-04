@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -32,7 +33,7 @@ import {
 
 import { createTaskSchema } from "../schemas";
 import { useCreateTask } from "../api/use-create-task";
-import { TaskStatus } from "../types";
+import { TaskStatus, TaskPriority, TaskImportance } from "../types";
 
 interface CreateTaskFormProps {
   onCancel?: () => void;
@@ -94,6 +95,58 @@ export const CreateTaskForm = ({
               />
               <FormField
                 control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter task description (optional)"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Bug, Feature, Enhancement" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="estimatedHours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Hours</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          step="0.5"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
                 name="dueDate"
                 render={({ field }) => (
                   <FormItem>
@@ -143,7 +196,7 @@ export const CreateTaskForm = ({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assignee</FormLabel>
+                    <FormLabel>Status</FormLabel>
                     <Select
                       defaultValue={field.value}
                       onValueChange={field.onChange}
@@ -171,6 +224,100 @@ export const CreateTaskForm = ({
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <FormMessage />
+                        <SelectContent>
+                          <SelectItem value={TaskPriority.LOW}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                              Low
+                            </span>
+                          </SelectItem>
+                          <SelectItem value={TaskPriority.MEDIUM}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                              Medium
+                            </span>
+                          </SelectItem>
+                          <SelectItem value={TaskPriority.HIGH}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-orange-500" />
+                              High
+                            </span>
+                          </SelectItem>
+                          <SelectItem value={TaskPriority.CRITICAL}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-red-500" />
+                              Critical
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="importance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Importance</FormLabel>
+                      <Select
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select importance" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <FormMessage />
+                        <SelectContent>
+                          <SelectItem value={TaskImportance.LOW}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-300" />
+                              Low
+                            </span>
+                          </SelectItem>
+                          <SelectItem value={TaskImportance.MEDIUM}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-500" />
+                              Medium
+                            </span>
+                          </SelectItem>
+                          <SelectItem value={TaskImportance.HIGH}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-purple-500" />
+                              High
+                            </span>
+                          </SelectItem>
+                          <SelectItem value={TaskImportance.CRITICAL}>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-purple-700" />
+                              Critical
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="projectId"

@@ -1,0 +1,13 @@
+Task Name,Description,Status,Priority,Importance,Due Date,Category,Estimated Hours
+"Optimize experience for mobile devices","Improve mobile user interface","TODO","HIGH","CRITICAL","2025-12-15","Frontend",8
+"Onboard new team members","Complete onboarding process","BACKLOG","MEDIUM","MEDIUM","2025-12-20","HR",4
+"Fast file search implementation","Add quick search functionality","IN_PROGRESS","HIGH","HIGH","2025-12-10","Backend",12
+"Affiliate links integration","Integrate affiliate tracking","TODO","MEDIUM","MEDIUM","2025-12-18","Backend",6
+"Shopping cart purchasing error fix","Debug cart issues","IN_PROGRESS","CRITICAL","CRITICAL","2025-12-08","Bug Fix",4
+"Fix duplicate email in middleware","Resolve email duplication bug","TODO","HIGH","HIGH","2025-12-12","Bug Fix",3
+"Billing system integration - Invoiced","Setup billing integration","BACKLOG","MEDIUM","HIGH","2025-12-25","Finance",10
+"Account settings defaults improvement","Update default settings UI","BACKLOG","LOW","MEDIUM","2025-12-30","Frontend",5
+"Trend suggestion enhancements","Improve recommendation engine","IN_REVIEW","MEDIUM","HIGH","2025-12-14","Backend",8
+"Web store purchasing performance issue fix","Optimize checkout performance","IN_PROGRESS","CRITICAL","CRITICAL","2025-12-09","Performance",6
+"Create great customer satisfaction survey","Design customer feedback form","TODO","HIGH","HIGH","2025-12-16","Product",4
+"Preset Test Device exploration and research","Research testing devices","IN_REVIEW","MEDIUM","MEDIUM","2025-12-22","QA",8

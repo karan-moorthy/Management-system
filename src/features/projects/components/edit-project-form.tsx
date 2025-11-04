@@ -65,7 +65,7 @@ export const EditProjectForm = ({
     if (!ok) return;
 
     deleteProject(
-      { param: { projectId: initialValues.$id } },
+      { param: { projectId: initialValues.id } },
       {
         onSuccess: () => {
           window.location.href = `/workspaces/${initialValues.workspaceId}`;
@@ -80,7 +80,7 @@ export const EditProjectForm = ({
       image: values.image instanceof File ? values.image : "",
     };
 
-    mutate({ form: finalValues, param: { projectId: initialValues.$id } });
+    mutate({ form: finalValues, param: { projectId: initialValues.id } });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +103,7 @@ export const EditProjectForm = ({
                 ? onCancel
                 : () =>
                     router.push(
-                      `/workspaces/${initialValues.workspaceId}/projects/${initialValues.$id}`
+                      `/workspaces/${initialValues.workspaceId}/projects/${initialValues.id}`
                     )
             }
           >

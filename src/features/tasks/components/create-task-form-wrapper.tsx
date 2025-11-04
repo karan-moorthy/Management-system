@@ -23,13 +23,13 @@ export const CreateTaskFormWrapper = ({
   });
 
   const projectOptions = projects?.documents.map((project) => ({
-    id: project.$id,
+    id: project.id,
     name: project.name,
-    imageUrl: project.imageUrl,
+    imageUrl: project.imageUrl || "",
   }));
 
   const memberOptions = members?.documents.map((member) => ({
-    id: member.$id,
+    id: member.userId, // Use userId for task assignee reference
     name: member.name,
   }));
 

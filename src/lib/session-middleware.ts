@@ -1,56 +1,61 @@
 import "server-only";
 
-import {
-  Account,
-  Client,
-  Databases,
-  Models,
-  Storage,
-  type Account as AccountType,
-  type Databases as DatabasesType,
-  type Storage as StorageType,
-  type Users as UsersType,
-} from "node-appwrite";
-
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
+import { db } from "@/db";
+import { sessions, users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 import { AUTH_COOKIE } from "@/features/auth/constants";
 
+export type User = typeof users.$inferSelect;
+
 type AdditionalContext = {
   Variables: {
-    account: AccountType;
-    databases: DatabasesType;
-    storage: StorageType;
-    users: UsersType;
-    user: Models.User<Models.Preferences>;
+    user: User;
+    userId: string;
   };
 };
 
 export const sessionMiddleware = createMiddleware<AdditionalContext>(
   async (c, next) => {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!);
+    const sessionToken = getCookie(c, AUTH_COOKIE);
 
-    const session = getCookie(c, AUTH_COOKIE);
+    if (!sessionToken) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Get session from PostgreSQL
+    const [session] = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.sessionToken, sessionToken))
+      .limit(1);
 
     if (!session) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    client.setSession(session);
+    // Check if session is expired
+    if (session.expires < new Date()) {
+      // Delete expired session
+      await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+      return c.json({ error: "Session expired" }, 401);
+    }
 
-    const account = new Account(client);
-    const databases = new Databases(client);
-    const storage = new Storage(client);
+    // Get user from PostgreSQL
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, session.userId))
+      .limit(1);
 
-    const user = await account.get();
+    if (!user) {
+      return c.json({ error: "User not found" }, 401);
+    }
 
-    c.set("account", account);
-    c.set("databases", databases);
-    c.set("storage", storage);
     c.set("user", user);
+    c.set("userId", user.id);
 
     await next();
   }

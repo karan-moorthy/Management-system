@@ -6,7 +6,7 @@ interface UseGetProjectsProps {
   workspaceId: string;
 }
 
-export const useGetProjects = ({ workspaceId }: UseGetProjectsProps) => {
+export const useGetProjects = ({ workspaceId }: UseGetProjectsProps, options?: { enabled?: boolean }) => {
   const query = useQuery({
     queryKey: ["projects", workspaceId],
     queryFn: async () => {
@@ -22,6 +22,7 @@ export const useGetProjects = ({ workspaceId }: UseGetProjectsProps) => {
 
       return data;
     },
+    enabled: workspaceId !== "" && (options?.enabled !== false),
   });
 
   return query;

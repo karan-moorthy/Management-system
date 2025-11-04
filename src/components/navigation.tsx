@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { SettingsIcon, UsersIcon } from "lucide-react";
+import { SettingsIcon, UsersIcon, KanbanSquareIcon } from "lucide-react";
 import Link from "next/link";
 import {
   GoCheckCircle,
@@ -26,6 +26,12 @@ const routes = [
     href: "/tasks",
     icon: GoCheckCircle,
     activeIcon: GoCheckCircleFill,
+  },
+  {
+    label: "Board",
+    href: "/board",
+    icon: KanbanSquareIcon,
+    activeIcon: KanbanSquareIcon,
   },
   {
     label: "Settings",

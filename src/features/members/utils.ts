@@ -1,22 +1,26 @@
-import { Query, type Databases } from "node-appwrite";
-
-import { DATABASE_ID, MEMBERS_ID } from "@/config";
+import { db } from "@/db";
+import { members } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 interface GetMemberProps {
-  databases: Databases;
   workspaceId: string;
   userId: string;
 }
 
 export const getMember = async ({
-  databases,
   workspaceId,
   userId,
 }: GetMemberProps) => {
-  const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-    Query.equal("workspaceId", workspaceId),
-    Query.equal("userId", userId),
-  ]);
+  const [member] = await db
+    .select()
+    .from(members)
+    .where(
+      and(
+        eq(members.workspaceId, workspaceId),
+        eq(members.userId, userId)
+      )
+    )
+    .limit(1);
 
-  return members.documents[0];
+  return member || null;
 };

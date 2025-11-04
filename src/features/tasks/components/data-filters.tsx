@@ -34,12 +34,12 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
   const isLoading = isLoadingProjects || isLoadingMembers;
 
   const projectOptions = projects?.documents.map((project) => ({
-    value: project.$id,
+    value: project.id,
     label: project.name,
   }));
 
   const memberOptions = members?.documents.map((member) => ({
-    value: member.$id,
+    value: member.id,
     label: member.name,
   }));
 
