@@ -13,24 +13,19 @@ import { DottedSeparator } from "@/components/dotted-separator";
 import { useGetWorkspaces } from "@/features/workspaces/api/use-get-workspaces";
 import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { useUploadExcelTasks } from "@/features/tasks/api/use-upload-excel-tasks";
+import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 
 export const ExcelUploadCard = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [workspaceId, setWorkspaceId] = useState<string>("");
   const [projectId, setProjectId] = useState<string>("");
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get current workspace from URL instead of managing state
+  const workspaceId = useWorkspaceId();
   const { data: workspaces } = useGetWorkspaces();
   const { data: projects } = useGetProjects({ workspaceId }, { enabled: !!workspaceId });
   const { mutate: uploadExcel, isPending } = useUploadExcelTasks();
-
-  // Set default workspace when workspaces load
-  React.useEffect(() => {
-    if (workspaces?.documents && workspaces.documents.length > 0 && !workspaceId) {
-      setWorkspaceId(workspaces.documents[0].id);
-    }
-  }, [workspaces, workspaceId]);
 
   // Clear project selection when workspace changes
   React.useEffect(() => {
@@ -90,7 +85,6 @@ export const ExcelUploadCard = () => {
     }, {
       onSuccess: () => {
         setFile(null);
-        setWorkspaceId("");
         setProjectId("");
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -123,29 +117,22 @@ export const ExcelUploadCard = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Workspace and Project Selection */}
+        {/* Current Workspace and Project Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="workspace">Workspace</Label>
-            <Select value={workspaceId} onValueChange={setWorkspaceId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select workspace" />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaces?.documents?.map((workspace) => (
-                  <SelectItem key={workspace.id} value={workspace.id}>
-                    {workspace.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="workspace">Current Workspace</Label>
+            <div className="flex items-center h-10 px-3 py-2 text-sm border border-input rounded-md bg-muted">
+              <span className="truncate">
+                {selectedWorkspace?.name || "Loading..."}
+              </span>
+            </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="project">Project</Label>
             <Select value={projectId} onValueChange={setProjectId} disabled={!workspaceId}>
               <SelectTrigger>
-                <SelectValue placeholder={!workspaceId ? "Select workspace first" : "Select project"} />
+                <SelectValue placeholder={!workspaceId ? "Loading..." : "Select project"} />
               </SelectTrigger>
               <SelectContent>
                 {projects?.documents && projects.documents.length > 0 ? (
@@ -156,7 +143,7 @@ export const ExcelUploadCard = () => {
                   ))
                 ) : (
                   <div className="px-2 py-1 text-sm text-muted-foreground">
-                    {workspaceId ? "No projects found. Create a project first." : "Select a workspace first"}
+                    {workspaceId ? "No projects found. Create a project first." : "Loading projects..."}
                   </div>
                 )}
               </SelectContent>
