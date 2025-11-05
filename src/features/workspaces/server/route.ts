@@ -404,6 +404,10 @@ const app = new Hono()
     const overdueTaskCount = thisMonthOverdueTasks.length;
     const overdueTaskDifference = overdueTaskCount - lastMonthOverdueTasks.length;
 
+    // Calculate incomplete tasks (all tasks except DONE)
+    const incompleteTaskCount = taskCount - completedTaskCount;
+    const incompleteTaskDifference = taskDifference - completedTaskDifference;
+
     return c.json({
       data: {
         taskCount,
@@ -412,6 +416,8 @@ const app = new Hono()
         assignedTaskDifference,
         completedTaskCount,
         completedTaskDifference,
+        incompleteTaskCount,
+        incompleteTaskDifference,
         overdueTaskCount,
         overdueTaskDifference,
       },

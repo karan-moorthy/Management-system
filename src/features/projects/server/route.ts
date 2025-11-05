@@ -50,13 +50,13 @@ const app = new Hono()
   .get(
     "/",
     sessionMiddleware,
-    zValidator("query", z.object({ workspaceId: z.string() })),
+    zValidator("query", z.object({ workspaceId: z.string().optional() })),
     async (c) => {
       const user = c.get("user");
       const { workspaceId } = c.req.valid("query");
 
       if (!workspaceId) {
-        return c.json({ error: "Missing workspaceId" }, 400);
+        return c.json({ data: { documents: [], total: 0 } }, 200);
       }
 
       const member = await getMember({

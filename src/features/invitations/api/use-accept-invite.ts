@@ -5,11 +5,11 @@ import { toast } from "sonner";
 import { client } from "@/lib/rpc";
 
 type ResponseType = InferResponseType<
-  (typeof client.api.invitations)[":inviteId"]["accept"]["$post"], 
+  (typeof client.api.invitations)[":invitationId"]["accept"]["$post"], 
   200
 >;
 type RequestType = InferRequestType<
-  (typeof client.api.invitations)[":inviteId"]["accept"]["$post"]
+  (typeof client.api.invitations)[":invitationId"]["accept"]["$post"]
 >;
 
 export const useAcceptInvite = () => {
@@ -17,7 +17,7 @@ export const useAcceptInvite = () => {
 
   const mutation = useMutation<ResponseType, Error, RequestType>({
     mutationFn: async ({ param }) => {
-      const response = await client.api.invitations[":inviteId"]["accept"].$post({ param });
+      const response = await client.api.invitations[":invitationId"]["accept"].$post({ param });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -27,10 +27,9 @@ export const useAcceptInvite = () => {
 
       return await response.json();
     },
-    onSuccess: ({ data }) => {
+    onSuccess: () => {
       toast.success("Successfully joined workspace!");
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace", data.id] });
       queryClient.invalidateQueries({ queryKey: ["members"] });
     },
     onError: (error) => {

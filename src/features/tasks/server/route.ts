@@ -243,8 +243,38 @@ const app = new Hono()
     const { taskId } = c.req.param();
 
     const [task] = await db
-      .select()
+      .select({
+        id: tasks.id,
+        name: tasks.name,
+        description: tasks.description,
+        status: tasks.status,
+        priority: tasks.priority,
+        importance: tasks.importance,
+        category: tasks.category,
+        estimatedHours: tasks.estimatedHours,
+        actualHours: tasks.actualHours,
+        tags: tasks.tags,
+        position: tasks.position,
+        dueDate: tasks.dueDate,
+        assigneeId: tasks.assigneeId,
+        projectId: tasks.projectId,
+        workspaceId: tasks.workspaceId,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+        assignee: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+        project: {
+          id: projects.id,
+          name: projects.name,
+          imageUrl: projects.imageUrl,
+        },
+      })
       .from(tasks)
+      .innerJoin(users, eq(tasks.assigneeId, users.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
       .where(eq(tasks.id, taskId))
       .limit(1);
 

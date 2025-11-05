@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { ArrowLeft, MoreVerticalIcon, Plus } from "lucide-react";
+import { ArrowLeft, MoreVerticalIcon, Plus, UserPlus, Mail } from "lucide-react";
 import Link from "next/link";
 
 import { MemberAvatar } from "@/features/members/components/member-avatar";
@@ -25,10 +25,13 @@ import { Separator } from "@/components/ui/separator";
 
 import { InviteMemberModal } from "@/features/invitations/components/invite-member-modal";
 import { useInviteMemberModal } from "@/features/invitations/hooks/use-invite-member-modal";
+import { AddMemberModal } from "@/features/members/components/add-member-modal";
+import { useAddMemberModal } from "@/features/members/hooks/use-add-member-modal";
 
 export const MembersList = () => {
   const workspaceId = useWorkspaceId();
   const { isOpen, setIsOpen } = useInviteMemberModal();
+  const { isOpen: isAddMemberOpen, setIsOpen: setIsAddMemberOpen } = useAddMemberModal();
   const [ConfirmDialog, confirm] = useConfirm(
     "Remove member",
     "This member will be removed from the workspace.",
@@ -67,6 +70,11 @@ export const MembersList = () => {
         setOpen={setIsOpen}
         workspaceId={workspaceId}
       />
+      <AddMemberModal
+        open={isAddMemberOpen}
+        setOpen={setIsAddMemberOpen}
+        workspaceId={workspaceId}
+      />
       <Card className="size-full border-none shadow-none">
         <ConfirmDialog />
         <CardHeader className="flex flex-row items-center gap-x-4 p-7 space-y-0">
@@ -77,22 +85,31 @@ export const MembersList = () => {
             </Link>
           </Button>
           <CardTitle className="text-xl font-bold">Members List</CardTitle>
-          <Button 
-            variant="primary" 
-            size="sm"
-            onClick={() => setIsOpen(true)}
-            className="ml-auto"
-          >
-            <Plus className="size-4 mr-2" />
-            Add Member
-          </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => setIsAddMemberOpen(true)}
+            >
+              <UserPlus className="size-4 mr-2" />
+              Add Existing
+            </Button>
+            <Button 
+              variant="primary" 
+              size="sm"
+              onClick={() => setIsOpen(true)}
+            >
+              <Mail className="size-4 mr-2" />
+              Send Invitation
+            </Button>
+          </div>
         </CardHeader>
       <div className="px-7">
         <DottedSeparator />
       </div>
       <CardContent className="p-7">
         {data?.documents.map((member, index) => (
-          <Fragment key={member.$id}>
+          <Fragment key={member.id}>
             <div className="flex items-center gap-2">
               <MemberAvatar
                 className="size-10"
@@ -113,7 +130,7 @@ export const MembersList = () => {
                   <DropdownMenuItem
                     className="font-medium"
                     onClick={() =>
-                      handleUpdateMember(member.$id, MemberRole.ADMIN)
+                      handleUpdateMember(member.id, MemberRole.ADMIN)
                     }
                     disabled={isUpdatingMember}
                   >
@@ -122,7 +139,7 @@ export const MembersList = () => {
                   <DropdownMenuItem
                     className="font-medium"
                     onClick={() =>
-                      handleUpdateMember(member.$id, MemberRole.MEMBER)
+                      handleUpdateMember(member.id, MemberRole.MEMBER)
                     }
                     disabled={isUpdatingMember}
                   >
@@ -131,7 +148,7 @@ export const MembersList = () => {
                   <DropdownMenuItem
                     className="font-medium text-amber-700"
                     onClick={() =>
-                      handleDeleteMember(member.$id)
+                      handleDeleteMember(member.id)
                     }
                     disabled={isDeletingMember}
                   >

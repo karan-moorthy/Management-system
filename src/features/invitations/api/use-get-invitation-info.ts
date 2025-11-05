@@ -10,8 +10,8 @@ export const useGetInvitationInfo = ({ inviteId }: useGetInvitationInfoProps) =>
   const query = useQuery({
     queryKey: ["invitation", inviteId],
     queryFn: async () => {
-      const response = await client.api.invitations[":inviteId"].$get({
-        param: { inviteId },
+      const response = await client.api.invitations[":invitationId"].$get({
+        param: { invitationId: inviteId },
       });
 
       if (!response.ok) {

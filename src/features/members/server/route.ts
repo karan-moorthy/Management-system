@@ -11,6 +11,73 @@ import { getMember } from "../utils";
 import { MemberRole } from "../types";
 
 const app = new Hono()
+  .post(
+    "/add-direct",
+    sessionMiddleware,
+    zValidator("json", z.object({
+      email: z.string().email("Please enter a valid email address"),
+      workspaceId: z.string().min(1, "Workspace ID is required"),
+      role: z.nativeEnum(MemberRole).optional().default(MemberRole.MEMBER),
+    })),
+    async (c) => {
+      const user = c.get("user");
+      const { email, workspaceId, role } = c.req.valid("json");
+
+      // Check if current user is admin of the workspace
+      const currentMember = await getMember({
+        workspaceId,
+        userId: user.id,
+      });
+
+      if (!currentMember || currentMember.role !== MemberRole.ADMIN) {
+        return c.json({ error: "Unauthorized - Only workspace admins can directly add members" }, 401);
+      }
+
+      try {
+        // Find user by email
+        const [targetUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+        
+        if (!targetUser) {
+          return c.json({ 
+            error: "User not found. The person must create an account first, or use the invitation system." 
+          }, 404);
+        }
+
+        // Check if user is already a member
+        const existingMember = await getMember({
+          workspaceId,
+          userId: targetUser.id,
+        });
+
+        if (existingMember) {
+          return c.json({ error: "User is already a member of this workspace" }, 400);
+        }
+
+        // Add user as member directly
+        const [newMember] = await db
+          .insert(members)
+          .values({
+            userId: targetUser.id,
+            workspaceId,
+            role,
+          })
+          .returning();
+
+        return c.json({ 
+          data: newMember,
+          message: `Successfully added ${email} to workspace`
+        });
+
+      } catch (error) {
+        console.error("Error adding member directly:", error);
+        return c.json({ error: "Failed to add member" }, 500);
+      }
+    }
+  )
   .get(
     "/",
     sessionMiddleware,
