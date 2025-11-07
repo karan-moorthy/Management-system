@@ -4,6 +4,11 @@ const nextConfig = {
     // Increase file upload limits for CSV task import
     serverComponentsExternalPackages: [],
   },
+  // Fix for OneDrive file locking issues on Windows
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 5,
+  },
   // Increase body size limit to 100MB for file uploads
   async headers() {
     return [

@@ -17,7 +17,26 @@ import { Task } from "../types";
 
 export const columns: ColumnDef<Task>[] = [
   {
-    accessorKey: "name",
+    accessorKey: "issueId",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          ID
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const issueId = row.original.issueId;
+
+      return <p className="font-mono text-xs">{issueId}</p>;
+    },
+  },
+  {
+    accessorKey: "summary",
     header: ({ column }) => {
       return (
         <Button
@@ -33,6 +52,25 @@ export const columns: ColumnDef<Task>[] = [
       const summary = row.original.summary;
 
       return <p className="line-clamp-1">{summary}</p>;
+    },
+  },
+  {
+    accessorKey: "issueType",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Type
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const issueType = row.original.issueType;
+
+      return <Badge variant="outline">{issueType}</Badge>;
     },
   },
   {
@@ -127,6 +165,35 @@ export const columns: ColumnDef<Task>[] = [
       const status = row.original.status;
 
       return <Badge variant={status}>{snakeCaseToTitleCase(status)}</Badge>;
+    },
+  },
+  {
+    accessorKey: "priority",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Priority
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const priority = row.original.priority;
+      const priorityColors: Record<string, string> = {
+        "Low": "bg-blue-100 text-blue-800",
+        "Medium": "bg-yellow-100 text-yellow-800",
+        "High": "bg-orange-100 text-orange-800",
+        "Critical": "bg-red-100 text-red-800",
+      };
+
+      return (
+        <Badge className={priorityColors[priority] || ""} variant="outline">
+          {priority}
+        </Badge>
+      );
     },
   },
   {

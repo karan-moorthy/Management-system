@@ -49,11 +49,12 @@ const app = new Hono()
       expires: expiresAt,
     });
 
+    const isProd = process.env.NODE_ENV === 'production';
     setCookie(c, AUTH_COOKIE, sessionToken, {
       path: "/",
       httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+      secure: isProd, // Only secure in production
+      sameSite: isProd ? "strict" : "lax", // Lax for localhost
       maxAge: 60 * 60 * 24 * 30,
     });
 

@@ -40,7 +40,7 @@ async function checkStatus() {
     if (taskCount.length > 0) {
       console.log('Recent tasks:');
       taskCount.slice(-5).forEach(task => {
-        console.log(`   - ${task.name} (${task.status}, Due: ${task.dueDate?.toDateString()})`);
+        console.log(`   - ${task.summary || task.issueId} (${task.status}, Due: ${task.dueDate?.toDateString()})`);
       });
     }
 

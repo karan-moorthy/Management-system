@@ -19,6 +19,7 @@ export const useUploadExcelTasks = () => {
 
       const response = await fetch('/api/tasks/upload-excel', {
         method: 'POST',
+        credentials: 'include', // Include cookies for authentication
         body: formData,
       });
 

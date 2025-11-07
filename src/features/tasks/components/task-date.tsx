@@ -8,8 +8,27 @@ interface TaskDateProps {
 }
 
 export const TaskDate = ({ value, className }: TaskDateProps) => {
+  // Handle empty or invalid dates
+  if (!value || value.trim() === '') {
+    return (
+      <div className="text-muted-foreground">
+        <span className={cn("truncate", className)}>No date</span>
+      </div>
+    );
+  }
+
   const today = new Date();
   const endDate = new Date(value);
+  
+  // Check if the date is valid
+  if (isNaN(endDate.getTime())) {
+    return (
+      <div className="text-muted-foreground">
+        <span className={cn("truncate", className)}>Invalid date</span>
+      </div>
+    );
+  }
+  
   const diffInDays = differenceInDays(endDate, today);
 
   let textColor = "text-muted-foreground";
@@ -24,7 +43,7 @@ export const TaskDate = ({ value, className }: TaskDateProps) => {
 
   return (
     <div className={textColor}>
-      <span className={cn("truncate", className)}>{format(value, "PPP")}</span>
+      <span className={cn("truncate", className)}>{format(endDate, "PPP")}</span>
     </div>
   );
 };

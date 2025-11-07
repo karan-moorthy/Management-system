@@ -118,7 +118,7 @@ export const TaskList = ({ data, total }: TaskListProps) => {
                       <p className="text-sm text-gray-600">{task.project?.name || task.projectName}</p>
                       <div className="size-1 rounded-full bg-neutral-300" />
                       <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{task.issueType}</span>
-                      {task.dueDate && (
+                      {task.dueDate && !isNaN(new Date(task.dueDate).getTime()) && (
                         <>
                           <div className="size-1 rounded-full bg-neutral-300" />
                           <div className="flex items-center text-sm text-muted-foreground">

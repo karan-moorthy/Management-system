@@ -394,14 +394,21 @@ const app = new Hono()
     sessionMiddleware,
     async (c) => {
       try {
+        console.log('📤 CSV Upload request received');
         const user = c.get("user");
+        console.log('👤 User:', user.email);
         const formData = await c.req.formData();
         
         const file = formData.get('file') as File;
         const workspaceId = formData.get('workspaceId') as string;
         const projectId = formData.get('projectId') as string;
 
+        console.log('📁 File:', file?.name, 'Size:', file?.size);
+        console.log('🏢 Workspace:', workspaceId);
+        console.log('📊 Project:', projectId);
+
         if (!file) {
+          console.error('❌ No file uploaded');
           return c.json({ error: "No file uploaded" }, 400);
         }
 
@@ -424,8 +431,11 @@ const app = new Hono()
         });
 
         if (!member) {
-          return c.json({ error: "Unauthorized" }, 401);
+          console.error('❌ User not a member of workspace');
+          return c.json({ error: "Unauthorized - You must be a member of this workspace" }, 401);
         }
+
+        console.log('✅ User is workspace member');
 
         // Get project to verify it exists
         const [project] = await db
@@ -435,8 +445,11 @@ const app = new Hono()
           .limit(1);
 
         if (!project) {
+          console.error('❌ Project not found');
           return c.json({ error: "Project not found" }, 404);
         }
+
+        console.log('✅ Project found:', project.name);
 
         // Check if file is CSV or Excel
         const fileName = file.name.toLowerCase();
@@ -491,19 +504,24 @@ const app = new Hono()
         const headers = rowsData[0];
         const createdTasks = [];
         
-        // Find assignee IDs by name or email
-        const assigneeNamesSet = new Set(rowsData.slice(1).map(row => row[4]).filter(Boolean));
-        const assigneeNames = Array.from(assigneeNamesSet);
+        // Find all user IDs by name or email (assignee, reporter, creator from columns 8, 9, 10)
+        const userNamesSet = new Set();
+        rowsData.slice(1).forEach(row => {
+          if (row[8]) userNamesSet.add(row[8].trim()); // Assignee
+          if (row[9]) userNamesSet.add(row[9].trim()); // Reporter
+          if (row[10]) userNamesSet.add(row[10].trim()); // Creator
+        });
+        const userNames = Array.from(userNamesSet).filter(Boolean) as string[];
         const assigneeMap = new Map();
         
-        if (assigneeNames.length > 0) {
+        if (userNames.length > 0) {
           const assignees = await db
             .select()
             .from(users)
             .where(
               or(
-                inArray(users.name, assigneeNames),
-                inArray(users.email, assigneeNames)
+                inArray(users.name, userNames),
+                inArray(users.email, userNames)
               )!
             );
           
@@ -554,36 +572,135 @@ const app = new Hono()
         for (let i = 1; i < rowsData.length; i++) {
           const row = rowsData[i];
           
-          if (row.length < 2 || !row[1]) continue; // Skip empty rows (Story column must have content)
+          if (row.length < 2 || !row[1]) continue; // Skip empty rows - Summary must have content
           
-          const epic = row[0]?.trim() || '';
-          const story = row[1]?.trim() || '';
-          const plannedStart = row[2]?.trim() || '';
-          const plannedCompletion = row[3]?.trim() || '';
-          const responsibility = row[4]?.trim() || '';
+          // Map CSV columns to fields
+          // Expected columns: Summary, Summary id, Issue id, Issue Type, Status, Project name, 
+          // Priority, Resolution, Assignee, Reporter, Creator, Created, Updated, Resolved, 
+          // Due date, Labels, Description, project_id, workspace_id, estimated_hours, actual_hours, position
+          
+          const summary = row[0]?.trim() || '';
+          const summaryId = row[1]?.trim() || '';
+          const issueId = row[2]?.trim() || `TASK-${Date.now()}-${i}`;
+          const issueType = row[3]?.trim() || 'Task';
+          const status = row[4]?.trim() || TaskStatus.TODO;
+          const projectName = row[5]?.trim() || project.name;
+          const priority = row[6]?.trim() || TaskPriority.MEDIUM;
+          const resolution = row[7]?.trim() || null;
+          const assigneeValue = row[8]?.trim() || '';
+          const reporterValue = row[9]?.trim() || '';
+          const creatorValue = row[10]?.trim() || '';
+          const createdValue = row[11]?.trim() || '';
+          const updatedValue = row[12]?.trim() || '';
+          const resolvedValue = row[13]?.trim() || '';
+          const dueDate = row[14]?.trim() || '';
+          const labels = row[15]?.trim() || '';
+          const description = row[16]?.trim() || '';
+          const csvProjectId = row[17]?.trim() || '';
+          const csvWorkspaceId = row[18]?.trim() || '';
+          const estimatedHours = row[19]?.trim() || '';
+          const actualHours = row[20]?.trim() || '';
+          const positionValue = row[21]?.trim() || '';
+          
+          // Map status to enum
+          let taskStatus = TaskStatus.TODO;
+          const statusMap: { [key: string]: TaskStatus } = {
+            'to do': TaskStatus.TODO,
+            'todo': TaskStatus.TODO,
+            'backlog': TaskStatus.BACKLOG,
+            'in progress': TaskStatus.IN_PROGRESS,
+            'in_progress': TaskStatus.IN_PROGRESS,
+            'in review': TaskStatus.IN_REVIEW,
+            'in_review': TaskStatus.IN_REVIEW,
+            'done': TaskStatus.DONE,
+            'completed': TaskStatus.DONE,
+          };
+          if (status && statusMap[status.toLowerCase()]) {
+            taskStatus = statusMap[status.toLowerCase()];
+          }
+          
+          // Map priority to enum
+          let taskPriority = TaskPriority.MEDIUM;
+          const priorityMap: { [key: string]: TaskPriority } = {
+            'low': TaskPriority.LOW,
+            'medium': TaskPriority.MEDIUM,
+            'high': TaskPriority.HIGH,
+            'critical': TaskPriority.CRITICAL,
+          };
+          if (priority && priorityMap[priority.toLowerCase()]) {
+            taskPriority = priorityMap[priority.toLowerCase()];
+          }
           
           // Find assignee ID
-          let assigneeId = assigneeMap.get(responsibility) || user.id;
+          let assigneeId = assigneeMap.get(assigneeValue) || user.id;
+          
+          // Find reporter ID (or use current user)
+          let reporterId = assigneeMap.get(reporterValue) || user.id;
+          
+          // Find creator ID (or use current user)
+          let creatorId = assigneeMap.get(creatorValue) || user.id;
+          
+          // Parse dates
+          let parsedDueDate = null;
+          if (dueDate) {
+            parsedDueDate = parseDate(dueDate);
+          }
+          
+          let parsedCreated = null;
+          if (createdValue) {
+            parsedCreated = parseDate(createdValue);
+          }
+          
+          let parsedResolved = null;
+          if (resolvedValue) {
+            parsedResolved = parseDate(resolvedValue);
+          }
+          
+          // Parse numbers
+          const parsedEstimatedHours = estimatedHours ? parseInt(estimatedHours, 10) : null;
+          const parsedActualHours = actualHours ? parseInt(actualHours, 10) : 0;
+          const parsedPosition = positionValue ? parseInt(positionValue, 10) : (1000 + i);
+          
+          // Parse labels (comma-separated or JSON)
+          let parsedLabels = null;
+          if (labels) {
+            try {
+              // Try to parse as JSON first
+              parsedLabels = JSON.parse(labels);
+              if (!Array.isArray(parsedLabels)) {
+                parsedLabels = JSON.stringify([labels]);
+              } else {
+                parsedLabels = JSON.stringify(parsedLabels);
+              }
+            } catch {
+              // If not JSON, split by comma
+              const labelArray = labels.split(',').map(l => l.trim()).filter(Boolean);
+              parsedLabels = labelArray.length > 0 ? JSON.stringify(labelArray) : null;
+            }
+          }
           
           const taskData = {
-            summary: story,
-            issueId: `TASK-${Date.now()}-${i}`, // Generate unique issue ID
-            issueType: "Task",
-            status: TaskStatus.TODO,
-            projectName: project.name,
-            priority: TaskPriority.MEDIUM,
-            resolution: null,
+            summary: summary || `Task ${i}`,
+            issueId: issueId,
+            issueType: issueType,
+            status: taskStatus,
+            projectName: projectName,
+            priority: taskPriority,
+            resolution: resolution || null,
             assigneeId,
-            reporterId: user.id,
-            creatorId: user.id,
-            description: `Epic: ${epic}\nPlanned Start: ${plannedStart}`,
-            projectId,
-            workspaceId,
-            dueDate: parseDate(plannedCompletion),
-            estimatedHours: null,
-            actualHours: 0,
-            labels: epic ? JSON.stringify([epic]) : null,
-            position: 1000 + i,
+            reporterId,
+            creatorId,
+            created: parsedCreated || new Date(),
+            updated: new Date(),
+            resolved: parsedResolved || null,
+            description: description || '',
+            projectId: csvProjectId || projectId, // Use CSV project ID if provided, else use selected
+            workspaceId: csvWorkspaceId || workspaceId, // Use CSV workspace ID if provided, else use selected
+            dueDate: parsedDueDate,
+            estimatedHours: parsedEstimatedHours,
+            actualHours: parsedActualHours,
+            labels: parsedLabels,
+            position: parsedPosition,
           };
 
           try {
@@ -593,11 +710,14 @@ const app = new Hono()
               .returning();
             
             createdTasks.push(newTask);
+            console.log(`✅ Created task ${i}: ${summary}`);
           } catch (error) {
-            console.error(`Error creating task from row ${i}:`, error);
+            console.error(`❌ Error creating task from row ${i}:`, error);
             console.error('Task data:', taskData);
           }
         }
+
+        console.log(`\n🎉 Upload complete! Created ${createdTasks.length} tasks`);
 
         return c.json({ 
           data: { 
@@ -607,8 +727,11 @@ const app = new Hono()
         });
         
       } catch (error) {
-        console.error('Excel upload error:', error);
-        return c.json({ error: "Failed to process Excel file" }, 500);
+        console.error('❌ Excel upload error:', error);
+        console.error('Error details:', error instanceof Error ? error.message : String(error));
+        return c.json({ 
+          error: error instanceof Error ? error.message : "Failed to process CSV file" 
+        }, 500);
       }
     }
   );
