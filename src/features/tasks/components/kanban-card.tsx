@@ -97,7 +97,7 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
             {task.priority}
           </Badge>
         </div>
-        <TaskActions id={task.id} projectId={task.projectId || ""}>
+        <TaskActions id={task.id} projectId={task.projectId || ""} assigneeId={task.assigneeId}>
           <MoreHorizontalIcon className="size-[18px] stroke-1 shrink-0 text-muted-foreground hover:opacity-75 transition" />
         </TaskActions>
       </div>

@@ -201,9 +201,10 @@ export const columns: ColumnDef<Task>[] = [
     cell: ({ row }) => {
       const id = row.original.id;
       const projectId = row.original.projectId || "";
+      const assigneeId = row.original.assigneeId;
 
       return (
-        <TaskActions id={id} projectId={projectId}>
+        <TaskActions id={id} projectId={projectId} assigneeId={assigneeId}>
           <Button variant="ghost" className="size-8 p-0">
             <MoreVertical className="size-4" />
           </Button>

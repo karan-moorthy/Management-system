@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/hooks/use-confirm";
+import { ConditionalGuard } from "@/components/permission-guard";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
 import { Project } from "@/features/projects/types";
@@ -20,6 +22,7 @@ interface TaskBreadcrumbsProps {
 export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
   const workspaceId = useWorkspaceId();
   const router = useRouter();
+  const permissions = usePermissionContext();
 
   const { mutate, isPending } = useDeleteTask();
   const [ConfirmDialog, confirm] = useConfirm(
@@ -57,16 +60,21 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
       </Link>
       <ChevronRightIcon className="size-4 lg:size-5 text-muted-foreground" />
       <p className="text-sm lg:text-lg font-semibold">{task.summary}</p>
-      <Button
-        onClick={handleDeleteTask}
-        disabled={isPending}
-        className="ml-auto"
-        variant="destructive"
-        size="sm"
+      <ConditionalGuard
+        condition={permissions.canDeleteTask}
+        fallback={null}
       >
-        <TrashIcon className="size-4 lg:mr-2" />
-        <span className="hidden lg:block">Delete Task</span>
-      </Button>
+        <Button
+          onClick={handleDeleteTask}
+          disabled={isPending}
+          className="ml-auto"
+          variant="destructive"
+          size="sm"
+        >
+          <TrashIcon className="size-4 lg:mr-2" />
+          <span className="hidden lg:block">Delete Task</span>
+        </Button>
+      </ConditionalGuard>
     </div>
   );
 };

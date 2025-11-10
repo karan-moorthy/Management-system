@@ -11,7 +11,12 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:check": "tsx src/db/check-connection.ts"
+    "db:check": "tsx src/db/check-connection.ts",
+    "migrate:roles": "tsx scripts/migrate-member-roles.ts",
+    "migrate:roles:preview": "tsx scripts/migrate-member-roles.ts --dry-run",
+    "manage:roles": "tsx scripts/manage-member-roles.ts",
+    "create:role-users": "tsx scripts/create-role-based-users.ts",
+    "add:users-to-workspaces": "tsx scripts/add-users-to-workspaces.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",

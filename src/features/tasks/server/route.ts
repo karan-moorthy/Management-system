@@ -7,6 +7,7 @@ import { sessionMiddleware } from "@/lib/session-middleware";
 import { db } from "@/db";
 import { tasks, projects, users } from "@/db/schema";
 import { getMember } from "@/features/members/utils";
+import { MemberRole } from "@/features/members/types";
 
 import { createTaskSchema } from "../schemas";
 import { TaskStatus, TaskPriority, IssueType, Resolution } from "../types";
@@ -33,6 +34,12 @@ const app = new Hono()
 
     if (!member) {
       return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // RBAC: Only ADMIN and PROJECT_MANAGER can delete tasks
+    const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
+    if (!allowedRoles.includes(member.role as MemberRole)) {
+      return c.json({ error: "Forbidden: Only admins and project managers can delete tasks" }, 403);
     }
 
     await db.delete(tasks).where(eq(tasks.id, taskId));
@@ -168,6 +175,11 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
+      // RBAC: All roles except MANAGEMENT can create tasks
+      if (member.role === MemberRole.MANAGEMENT) {
+        return c.json({ error: "Forbidden: Management role cannot create tasks" }, 403);
+      }
+
       // Get highest position
       const [highestPositionTask] = await db
         .select()
@@ -239,6 +251,27 @@ const app = new Hono()
       if (!member) {
         return c.json({ error: "Unauthorized" }, 401);
       }
+
+      // RBAC: Permission checks based on role
+      const role = member.role as MemberRole;
+      
+      // MANAGEMENT cannot edit tasks
+      if (role === MemberRole.MANAGEMENT) {
+        return c.json({ error: "Forbidden: Management role cannot edit tasks" }, 403);
+      }
+
+      // EMPLOYEE can only edit their own tasks
+      if (role === MemberRole.EMPLOYEE && existingTask.assigneeId !== user.id) {
+        return c.json({ error: "Forbidden: You can only edit tasks assigned to you" }, 403);
+      }
+
+      // EMPLOYEE cannot change task status (needs approval)
+      if (role === MemberRole.EMPLOYEE && updates.status && updates.status !== existingTask.status) {
+        return c.json({ error: "Forbidden: Employees cannot change task status. Please request approval from your team lead or manager." }, 403);
+      }
+
+      // TEAM_LEAD can edit team tasks (TODO: Add team check when we have teams)
+      // For now, TEAM_LEAD has same permissions as ADMIN/PM for editing
 
       const [task] = await db
         .update(tasks)

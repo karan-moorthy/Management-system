@@ -11,6 +11,33 @@ import { useDeleteMember } from "@/features/members/api/use-delete-member";
 import { useUpdateMember } from "@/features/members/api/use-update-member";
 import { MemberRole } from "@/features/members/types";
 
+// Helper function to get role display name
+const getRoleDisplayName = (role: MemberRole): string => {
+  const names: Record<MemberRole, string> = {
+    [MemberRole.ADMIN]: "Administrator",
+    [MemberRole.PROJECT_MANAGER]: "Project Manager",
+    [MemberRole.TEAM_LEAD]: "Team Lead",
+    [MemberRole.EMPLOYEE]: "Employee",
+    [MemberRole.MANAGEMENT]: "Management",
+    [MemberRole.MEMBER]: "Member",
+  };
+  return names[role] || role;
+};
+
+// Helper function to get role badge color
+const getRoleBadgeColor = (role: MemberRole): string => {
+  const colors: Record<MemberRole, string> = {
+    [MemberRole.ADMIN]: "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400",
+    [MemberRole.PROJECT_MANAGER]: "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
+    [MemberRole.TEAM_LEAD]: "bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400",
+    [MemberRole.EMPLOYEE]: "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400",
+    [MemberRole.MANAGEMENT]: "bg-gray-100 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400",
+    [MemberRole.MEMBER]: "bg-slate-100 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400",
+  };
+  return colors[role] || "bg-gray-100 text-gray-700";
+};
+
+
 import { useConfirm } from "@/hooks/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,7 +144,12 @@ export const MembersList = () => {
                 name={member.name}
               />
               <div className="flex flex-col flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{member.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate">{member.name}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(member.role as MemberRole)}`}>
+                    {getRoleDisplayName(member.role as MemberRole)}
+                  </span>
+                </div>
                 <p className="text-xs text-muted-foreground truncate">{member.email}</p>
               </div>
               <DropdownMenu>
@@ -139,11 +171,38 @@ export const MembersList = () => {
                   <DropdownMenuItem
                     className="font-medium"
                     onClick={() =>
-                      handleUpdateMember(member.id, MemberRole.MEMBER)
+                      handleUpdateMember(member.id, MemberRole.PROJECT_MANAGER)
                     }
                     disabled={isUpdatingMember}
                   >
-                    Set as Member
+                    Set as Project Manager
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="font-medium"
+                    onClick={() =>
+                      handleUpdateMember(member.id, MemberRole.TEAM_LEAD)
+                    }
+                    disabled={isUpdatingMember}
+                  >
+                    Set as Team Lead
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="font-medium"
+                    onClick={() =>
+                      handleUpdateMember(member.id, MemberRole.EMPLOYEE)
+                    }
+                    disabled={isUpdatingMember}
+                  >
+                    Set as Employee
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="font-medium"
+                    onClick={() =>
+                      handleUpdateMember(member.id, MemberRole.MANAGEMENT)
+                    }
+                    disabled={isUpdatingMember}
+                  >
+                    Set as Management
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="font-medium text-amber-700 dark:text-amber-400"

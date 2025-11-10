@@ -1,6 +1,10 @@
 export enum MemberRole {
   ADMIN = "ADMIN",
   MEMBER = "MEMBER",
+  PROJECT_MANAGER = "PROJECT_MANAGER",
+  TEAM_LEAD = "TEAM_LEAD",
+  EMPLOYEE = "EMPLOYEE",
+  MANAGEMENT = "MANAGEMENT",
 }
 
 export type Member = {

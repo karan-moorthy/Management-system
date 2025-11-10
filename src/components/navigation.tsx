@@ -11,7 +11,6 @@ import {
 } from "react-icons/go";
 
 import { usePathname } from "next/navigation";
-
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 
 const routes = [

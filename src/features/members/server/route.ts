@@ -29,8 +29,10 @@ const app = new Hono()
         userId: user.id,
       });
 
-      if (!currentMember || currentMember.role !== MemberRole.ADMIN) {
-        return c.json({ error: "Unauthorized - Only workspace admins can directly add members" }, 401);
+      // RBAC: Only ADMIN and PROJECT_MANAGER can add members
+      const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
+      if (!currentMember || !allowedRoles.includes(currentMember.role as MemberRole)) {
+        return c.json({ error: "Unauthorized - Only admins and project managers can add members" }, 401);
       }
 
       try {
@@ -141,8 +143,10 @@ const app = new Hono()
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    if (currentMember.role !== MemberRole.ADMIN) {
-      return c.json({ error: "Unauthorized" }, 401);
+    // RBAC: Only ADMIN and PROJECT_MANAGER can delete members
+    const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
+    if (!allowedRoles.includes(currentMember.role as MemberRole)) {
+      return c.json({ error: "Forbidden: Only admins and project managers can remove members" }, 403);
     }
 
     if (memberToDelete.userId === user.id) {
@@ -181,8 +185,10 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      if (currentMember.role !== MemberRole.ADMIN) {
-        return c.json({ error: "Unauthorized" }, 401);
+      // RBAC: Only ADMIN and PROJECT_MANAGER can update member roles
+      const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
+      if (!allowedRoles.includes(currentMember.role as MemberRole)) {
+        return c.json({ error: "Forbidden: Only admins and project managers can update member roles" }, 403);
       }
 
       if (memberToUpdate.userId === user.id) {

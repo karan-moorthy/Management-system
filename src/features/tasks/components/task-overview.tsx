@@ -4,6 +4,8 @@ import { DottedSeparator } from "@/components/dotted-separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { snakeCaseToTitleCase } from "@/lib/utils";
+import { ConditionalGuard } from "@/components/permission-guard";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 
 import { MemberAvatar } from "@/features/members/components/member-avatar";
 
@@ -19,16 +21,25 @@ interface TaskOverviewProps {
 
 export const TaskOverview = ({ task }: TaskOverviewProps) => {
   const { open } = useEditTaskModal();
+  const permissions = usePermissionContext();
+
+  // Check if user can edit this task (pass assigneeId for ownership check)
+  const canEdit = permissions.canEditTask(task.assigneeId);
 
   return (
     <div className="flex flex-col gap-y-4 col-span-1">
       <div className="bg-muted rounded-lg p-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Overview</p>
-          <Button onClick={() => open(task.id)} size="sm" variant="secondary">
-            <PencilIcon className="size-4 mr-2" />
-            Edit
-          </Button>
+          <ConditionalGuard
+            condition={canEdit}
+            fallback={null}
+          >
+            <Button onClick={() => open(task.id)} size="sm" variant="secondary">
+              <PencilIcon className="size-4 mr-2" />
+              Edit
+            </Button>
+          </ConditionalGuard>
         </div>
         <DottedSeparator className="my-4" />
         <div className="flex flex-col gap-y-4">

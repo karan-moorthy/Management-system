@@ -7,6 +7,8 @@ import { PageError } from "@/components/page-error";
 import { PageLoader } from "@/components/page-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConditionalGuard } from "@/components/permission-guard";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 
 import { useGetMembers } from "@/features/members/api/use-get-members";
 import { MemberAvatar } from "@/features/members/components/member-avatar";
@@ -74,6 +76,7 @@ interface TaskListProps {
 export const TaskList = ({ data, total }: TaskListProps) => {
   const workspaceId = useWorkspaceId();
   const { open: createTask } = useCreateTaskModal();
+  const permissions = usePermissionContext();
 
   // Sort tasks by priority (Critical first, then High, Medium, Low)
   const sortedTasks = [...data].sort((a, b) => {
@@ -91,9 +94,14 @@ export const TaskList = ({ data, total }: TaskListProps) => {
       <div className="bg-muted rounded-lg p-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Tasks ({total})</p>
-          <Button variant="muted" size="icon" onClick={createTask}>
-            <PlusIcon className="size-4 text-neutral-400" />
-          </Button>
+          <ConditionalGuard
+            condition={permissions.canCreateTask(undefined)}
+            fallback={null}
+          >
+            <Button variant="muted" size="icon" onClick={createTask}>
+              <PlusIcon className="size-4 text-neutral-400" />
+            </Button>
+          </ConditionalGuard>
         </div>
         <DottedSeparator className="my-4" />
         <ul className="flex flex-col gap-y-4">
@@ -155,15 +163,21 @@ interface ProjectListProps {
 export const ProjectList = ({ data, total }: ProjectListProps) => {
   const workspaceId = useWorkspaceId();
   const { open: createProject } = useCreateProjectModal();
+  const permissions = usePermissionContext();
 
   return (
     <div className="flex flex-col gap-y-4 col-span-1">
       <div className="bg-card border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Projects ({total})</p>
-          <Button variant="secondary" size="icon" onClick={createProject}>
-            <PlusIcon className="size-4 text-muted-foreground" />
-          </Button>
+          <ConditionalGuard
+            condition={permissions.canCreateProject}
+            fallback={null}
+          >
+            <Button variant="secondary" size="icon" onClick={createProject}>
+              <PlusIcon className="size-4 text-muted-foreground" />
+            </Button>
+          </ConditionalGuard>
         </div>
         <DottedSeparator className="my-4" />
         <ul className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -202,17 +216,23 @@ interface MemberListProps {
 
 export const MemberList = ({ data, total }: MemberListProps) => {
   const workspaceId = useWorkspaceId();
+  const permissions = usePermissionContext();
 
   return (
     <div className="flex flex-col gap-y-4 col-span-1">
       <div className="bg-card border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Members ({total})</p>
-          <Button variant="secondary" size="icon" asChild>
-            <Link href={`/workspaces/${workspaceId}/members`}>
-              <SettingsIcon className="size-4 text-muted-foreground" />
-            </Link>
-          </Button>
+          <ConditionalGuard
+            condition={permissions.canManageUsers}
+            fallback={null}
+          >
+            <Button variant="secondary" size="icon" asChild>
+              <Link href={`/workspaces/${workspaceId}/members`}>
+                <SettingsIcon className="size-4 text-muted-foreground" />
+              </Link>
+            </Button>
+          </ConditionalGuard>
         </div>
         <DottedSeparator className="my-4" />
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { eq, and, desc, gte, lte } from "drizzle-orm";
 
 import { getMember } from "@/features/members/utils";
+import { MemberRole } from "@/features/members/types";
 import { TaskStatus } from "@/features/tasks/types";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { db } from "@/db";
@@ -28,6 +29,11 @@ const app = new Hono()
 
       if (!member) {
         return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      // RBAC: Only ADMIN can create projects
+      if (member.role !== MemberRole.ADMIN) {
+        return c.json({ error: "Forbidden: Only admins can create projects" }, 403);
       }
 
       let uploadedImageUrl: string | undefined;
@@ -130,6 +136,12 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
+      // RBAC: Only ADMIN and PROJECT_MANAGER can edit projects
+      const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
+      if (!allowedRoles.includes(member.role as MemberRole)) {
+        return c.json({ error: "Forbidden: Insufficient permissions to edit project" }, 403);
+      }
+
       let uploadedImageUrl: string | undefined;
       if (image instanceof File) {
         uploadedImageUrl = undefined; // TODO: Implement image upload
@@ -171,6 +183,11 @@ const app = new Hono()
 
     if (!member) {
       return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // RBAC: Only ADMIN can delete projects
+    if (member.role !== MemberRole.ADMIN) {
+      return c.json({ error: "Forbidden: Only admins can delete projects" }, 403);
     }
 
     await db.delete(projects).where(eq(projects.id, projectId));

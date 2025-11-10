@@ -2,6 +2,8 @@ import { ExternalLink, PencilIcon, TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { useConfirm } from "@/hooks/use-confirm";
+import { ConditionalGuard } from "@/components/permission-guard";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,12 +19,14 @@ import { useEditTaskModal } from "../hooks/use-edit-task-modal";
 interface TaskActionsProps {
   id: string;
   projectId: string;
+  assigneeId?: string;
   children: React.ReactNode;
 }
 
-export const TaskActions = ({ id, projectId, children }: TaskActionsProps) => {
+export const TaskActions = ({ id, projectId, assigneeId, children }: TaskActionsProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
+  const permissions = usePermissionContext();
 
   const { open } = useEditTaskModal();
 
@@ -32,6 +36,10 @@ export const TaskActions = ({ id, projectId, children }: TaskActionsProps) => {
     "destructive"
   );
   const { mutate, isPending } = useDeleteTask();
+
+  // Check permissions
+  const canEdit = permissions.canEditTask(assigneeId);
+  const canDelete = permissions.canDeleteTask;
 
   const onDelete = async () => {
     const ok = await confirm();
@@ -68,23 +76,27 @@ export const TaskActions = ({ id, projectId, children }: TaskActionsProps) => {
             <ExternalLink className="size-4 mr-2 stroke-2" />
             Open Project
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              open(id);
-            }}
-            className="font-medium p-[10px]"
-          >
-            <PencilIcon className="size-4 mr-2 stroke-2" />
-            Edit Task
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={onDelete}
-            disabled={isPending}
-            className="text-amber-700 focus:text-amber-700 font-medium p-[10px]"
-          >
-            <TrashIcon className="size-4 mr-2 stroke-2" />
-            Delete Task
-          </DropdownMenuItem>
+          {canEdit && (
+            <DropdownMenuItem
+              onClick={() => {
+                open(id);
+              }}
+              className="font-medium p-[10px]"
+            >
+              <PencilIcon className="size-4 mr-2 stroke-2" />
+              Edit Task
+            </DropdownMenuItem>
+          )}
+          {canDelete && (
+            <DropdownMenuItem
+              onClick={onDelete}
+              disabled={isPending}
+              className="text-amber-700 focus:text-amber-700 font-medium p-[10px]"
+            >
+              <TrashIcon className="size-4 mr-2 stroke-2" />
+              Delete Task
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
