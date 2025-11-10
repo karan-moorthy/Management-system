@@ -110,19 +110,19 @@ export const MembersList = () => {
       <CardContent className="p-7">
         {data?.documents.map((member, index) => (
           <Fragment key={member.id}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <MemberAvatar
-                className="size-10"
+                className="size-10 flex-shrink-0"
                 fallbackClassName="text-lg"
                 name={member.name}
               />
-              <div className="flex flex-col">
-                <p className="text-sm font-medium">{member.name}</p>
-                <p className="text-xs text-muted-foreground">{member.email}</p>
+              <div className="flex flex-col flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{member.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{member.email}</p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="ml-auto" variant="secondary" size="icon">
+                  <Button className="flex-shrink-0" variant="secondary" size="icon">
                     <MoreVerticalIcon className="size-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -146,7 +146,7 @@ export const MembersList = () => {
                     Set as Member
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="font-medium text-amber-700"
+                    className="font-medium text-amber-700 dark:text-amber-400"
                     onClick={() =>
                       handleDeleteMember(member.id)
                     }

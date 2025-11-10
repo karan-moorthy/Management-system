@@ -115,12 +115,12 @@ export const TaskList = ({ data, total }: TaskListProps) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-x-2">
-                      <p className="text-sm text-gray-600">{task.project?.name || task.projectName}</p>
-                      <div className="size-1 rounded-full bg-neutral-300" />
-                      <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{task.issueType}</span>
+                      <p className="text-sm text-muted-foreground">{task.project?.name || task.projectName}</p>
+                      <div className="size-1 rounded-full bg-muted-foreground/50" />
+                      <span className="text-xs bg-muted px-2 py-1 rounded-full">{task.issueType}</span>
                       {task.dueDate && !isNaN(new Date(task.dueDate).getTime()) && (
                         <>
-                          <div className="size-1 rounded-full bg-neutral-300" />
+                          <div className="size-1 rounded-full bg-muted-foreground/50" />
                           <div className="flex items-center text-sm text-muted-foreground">
                             <CalendarIcon className="size-3 mr-1" />
                             <span className="truncate">
@@ -158,11 +158,11 @@ export const ProjectList = ({ data, total }: ProjectListProps) => {
 
   return (
     <div className="flex flex-col gap-y-4 col-span-1">
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-card border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Projects ({total})</p>
           <Button variant="secondary" size="icon" onClick={createProject}>
-            <PlusIcon className="size-4 text-neutral-400" />
+            <PlusIcon className="size-4 text-muted-foreground" />
           </Button>
         </div>
         <DottedSeparator className="my-4" />
@@ -205,12 +205,12 @@ export const MemberList = ({ data, total }: MemberListProps) => {
 
   return (
     <div className="flex flex-col gap-y-4 col-span-1">
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-card border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Members ({total})</p>
           <Button variant="secondary" size="icon" asChild>
             <Link href={`/workspaces/${workspaceId}/members`}>
-              <SettingsIcon className="size-4 text-neutral-400" />
+              <SettingsIcon className="size-4 text-muted-foreground" />
             </Link>
           </Button>
         </div>
@@ -219,13 +219,13 @@ export const MemberList = ({ data, total }: MemberListProps) => {
           {data.map((member) => (
             <li key={member.id}>
               <Card className="shadow-none rounded-lg overflow-hidden">
-                <CardContent className="p-3 flex flex-col items-center gap-x-2">
+                <CardContent className="p-3 flex flex-col items-center gap-y-2">
                   <MemberAvatar name={member.name} className="size-12" />
-                  <div className="flex flex-col items-center overflow-hidden">
-                    <p className="text-lg font-medium line-clamp-1">
+                  <div className="flex flex-col items-center overflow-hidden w-full">
+                    <p className="text-sm font-medium line-clamp-1 w-full text-center">
                       {member.name}
                     </p>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
+                    <p className="text-xs text-muted-foreground line-clamp-1 w-full text-center">
                       {member.email}
                     </p>
                   </div>

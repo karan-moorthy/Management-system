@@ -27,6 +27,16 @@ export const ExcelUploadCard = () => {
   const { data: projects } = useGetProjects({ workspaceId }, { enabled: !!workspaceId });
   const { mutate: uploadExcel, isPending } = useUploadExcelTasks();
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔍 Upload Card State:', {
+      workspaceId,
+      projectCount: projects?.documents?.length || 0,
+      projects: projects?.documents?.map(p => ({ id: p.id, name: p.name })) || [],
+      selectedProjectId: projectId,
+    });
+  }, [workspaceId, projects, projectId]);
+
   // Clear project selection when workspace changes
   React.useEffect(() => {
     setProjectId("");
@@ -91,8 +101,24 @@ export const ExcelUploadCard = () => {
 
   const handleUpload = () => {
     if (!file || !workspaceId || !projectId) {
+      console.log('❌ Upload blocked:', {
+        hasFile: !!file,
+        hasWorkspace: !!workspaceId,
+        hasProject: !!projectId,
+        workspaceId,
+        projectId,
+      });
       return;
     }
+
+    console.log('✅ Starting upload:', {
+      fileName: file.name,
+      fileSize: file.size,
+      workspaceId,
+      projectId,
+      workspace: selectedWorkspace?.name,
+      project: selectedProject?.name,
+    });
 
     uploadExcel({
       file,
@@ -174,8 +200,8 @@ export const ExcelUploadCard = () => {
           <div
             className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
               dragActive
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-300 hover:border-gray-400"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                : "border-border hover:border-muted-foreground"
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -184,24 +210,24 @@ export const ExcelUploadCard = () => {
           >
             {!file ? (
               <div className="space-y-2">
-                <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
                 <div className="text-sm">
                   <button
                     type="button"
-                    className="text-blue-600 hover:text-blue-500"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-500"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     Click to upload
                   </button>{" "}
                   or drag and drop
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   CSV files only, up to 100MB
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
-                <FileSpreadsheet className="mx-auto h-8 w-8 text-green-500" />
+                <FileSpreadsheet className="mx-auto h-8 w-8 text-green-500 dark:text-green-400" />
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-sm font-medium">{file.name}</span>
                   <Badge variant="secondary">{formatFileSize(file.size)}</Badge>
@@ -231,7 +257,7 @@ export const ExcelUploadCard = () => {
         {/* Upload Status */}
         {file && workspaceId && projectId && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
               <CheckCircle className="h-4 w-4" />
               Ready to upload to {selectedWorkspace?.name} → {selectedProject?.name}
             </div>
