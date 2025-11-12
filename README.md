@@ -2,12 +2,12 @@
 
 A modern project management system built with TypeScript and Next.js, featuring email integration and invitation management capabilities.
 
-## 🚀 Tech Stack
+## This is a Full-Stack TypeScript/Next.js application. Based on the repository structure visible (with files like drizzle.config.ts, next.config.mjs, and multiple TypeScript configuration files), this appears to be:
 
-- TypeScript
-- Next.js
-- Tailwind CSS
-- Bun Package Manager
+- Frontend: Next.js (React) with TypeScript
+- Backend: Node.js/TypeScript with likely API routes powered by Next.js API Routes
+- Database: PostgreSQL (as indicated by Drizzle ORM configuration files)
+- The presence of JavaScript files and shell/batch scripts suggests these are utility scripts and configuration files that support the main TypeScript application.
 
 ## 📋 Project Overview
 
