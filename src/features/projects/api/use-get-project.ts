@@ -22,6 +22,7 @@ export const useGetProject = ({ projectId }: UseGetProjectProps) => {
 
       return data;
     },
+    enabled: !!projectId && projectId !== "skip", // Only fetch if we have a valid projectId
   });
 
   return query;
