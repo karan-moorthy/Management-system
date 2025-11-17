@@ -31,6 +31,9 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useCreateProfile } from "../api/use-create-profile";
+import { useGetDesignations } from "../api/use-get-designations";
+import { useCreateDesignation } from "../api/use-create-designation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -53,6 +56,13 @@ export const CreateProfileForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [dobOpen, setDobOpen] = useState(false);
   const [dojOpen, setDojOpen] = useState(false);
+  const [showAddDesignation, setShowAddDesignation] = useState(false);
+  const [newDesignation, setNewDesignation] = useState("");
+
+  const { data: customDesignations, isLoading: isLoadingDesignations } = useGetDesignations();
+  const { mutate: createDesignation, isPending: isCreatingDesignation } = useCreateDesignation();
+
+  console.log("Custom Designations:", customDesignations);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -103,6 +113,22 @@ export const CreateProfileForm = () => {
       dateOfJoining: values.dateOfJoining ? values.dateOfJoining.toISOString() : undefined,
       skills,
     });
+  };
+
+  const handleAddDesignation = () => {
+    if (newDesignation.trim()) {
+      createDesignation(
+        { name: newDesignation.trim() },
+        {
+          onSuccess: (data) => {
+            const designationName = newDesignation.trim();
+            form.setValue("designation", designationName);
+            setNewDesignation("");
+            setShowAddDesignation(false);
+          },
+        }
+      );
+    }
   };
 
   return (
@@ -188,7 +214,19 @@ export const CreateProfileForm = () => {
             name="designation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Designation</FormLabel>
+                <FormLabel className="flex items-center justify-between">
+                  <span>Designation</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddDesignation(true)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add New
+                  </Button>
+                </FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -203,6 +241,11 @@ export const CreateProfileForm = () => {
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="senior_manager">Senior Manager</SelectItem>
                     <SelectItem value="director">Director</SelectItem>
+                    {customDesignations && customDesignations.length > 0 && customDesignations.map((designation) => (
+                      <SelectItem key={designation.id} value={designation.name}>
+                        {designation.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -410,6 +453,50 @@ export const CreateProfileForm = () => {
           </Button>
         </div>
       </form>
+
+      {/* Add Designation Dialog */}
+      <Dialog open={showAddDesignation} onOpenChange={setShowAddDesignation}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Designation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Designation Name</label>
+              <Input
+                placeholder="Enter designation name"
+                value={newDesignation}
+                onChange={(e) => setNewDesignation(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddDesignation();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNewDesignation("");
+                setShowAddDesignation(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddDesignation}
+              disabled={!newDesignation.trim() || isCreatingDesignation}
+            >
+              {isCreatingDesignation ? "Adding..." : "Add Designation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 };

@@ -824,7 +824,7 @@ const app = new Hono()
             resolved: parsedResolved || null,
             description: description || '',
             projectId: csvProjectId || projectId, // Use CSV project ID if provided, else use selected
-            workspaceId: csvWorkspaceId || (workspaceId && workspaceId !== 'default' ? workspaceId : null), // Use CSV workspace ID if provided, else use selected (or null if 'default')
+            workspaceId: null, // No workspace concept
             dueDate: parsedDueDate,
             estimatedHours: parsedEstimatedHours,
             actualHours: parsedActualHours,

@@ -33,6 +33,9 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useGetProfile } from "../api/use-get-profile";
 import { useUpdateProfile } from "../api/use-update-profile";
+import { useGetDesignations } from "../api/use-get-designations";
+import { useCreateDesignation } from "../api/use-create-designation";
+import { Dialog as AddDialog, DialogContent as AddDialogContent, DialogHeader as AddDialogHeader, DialogTitle as AddDialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -57,10 +60,14 @@ interface EditProfileModalProps {
 export const EditProfileModal = ({ userId, open, onOpenChange }: EditProfileModalProps) => {
   const { data: profile, isLoading } = useGetProfile(userId);
   const { mutate: updateProfile, isPending } = useUpdateProfile();
+  const { data: customDesignations } = useGetDesignations();
+  const { mutate: createDesignation, isPending: isCreatingDesignation } = useCreateDesignation();
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
   const [dobOpen, setDobOpen] = useState(false);
   const [dojOpen, setDojOpen] = useState(false);
+  const [showAddDesignation, setShowAddDesignation] = useState(false);
+  const [newDesignation, setNewDesignation] = useState("");
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -126,6 +133,22 @@ export const EditProfileModal = ({ userId, open, onOpenChange }: EditProfileModa
     );
   };
 
+  const handleAddDesignation = () => {
+    if (newDesignation.trim()) {
+      createDesignation(
+        { name: newDesignation.trim() },
+        {
+          onSuccess: (data) => {
+            const designationName = newDesignation.trim();
+            form.setValue("designation", designationName);
+            setNewDesignation("");
+            setShowAddDesignation(false);
+          },
+        }
+      );
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -188,7 +211,19 @@ export const EditProfileModal = ({ userId, open, onOpenChange }: EditProfileModa
                   name="designation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Designation</FormLabel>
+                      <FormLabel className="flex items-center justify-between">
+                        <span>Designation</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAddDesignation(true)}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add New
+                        </Button>
+                      </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -203,6 +238,11 @@ export const EditProfileModal = ({ userId, open, onOpenChange }: EditProfileModa
                           <SelectItem value="manager">Manager</SelectItem>
                           <SelectItem value="senior_manager">Senior Manager</SelectItem>
                           <SelectItem value="director">Director</SelectItem>
+                          {customDesignations?.map((designation) => (
+                            <SelectItem key={designation.id} value={designation.name}>
+                              {designation.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -413,6 +453,50 @@ export const EditProfileModal = ({ userId, open, onOpenChange }: EditProfileModa
           </Form>
         )}
       </DialogContent>
+
+      {/* Add Designation Dialog */}
+      <AddDialog open={showAddDesignation} onOpenChange={setShowAddDesignation}>
+        <AddDialogContent>
+          <AddDialogHeader>
+            <AddDialogTitle>Add New Designation</AddDialogTitle>
+          </AddDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Designation Name</label>
+              <Input
+                placeholder="Enter designation name"
+                value={newDesignation}
+                onChange={(e) => setNewDesignation(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddDesignation();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNewDesignation("");
+                setShowAddDesignation(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddDesignation}
+              disabled={!newDesignation.trim() || isCreatingDesignation}
+            >
+              {isCreatingDesignation ? "Adding..." : "Add Designation"}
+            </Button>
+          </DialogFooter>
+        </AddDialogContent>
+      </AddDialog>
     </Dialog>
   );
 };

@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, customDesignations } from "@/db/schema";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { eq } from "drizzle-orm";
 
@@ -96,6 +96,45 @@ const app = new Hono()
       return c.json({ error: error.message || "Internal server error" }, 500);
     }
   })
+  .get("/designations", async (c) => {
+    try {
+      const designations = await db
+        .select()
+        .from(customDesignations)
+        .orderBy(customDesignations.name);
+
+      return c.json({ data: designations });
+    } catch (error) {
+      console.error("Error fetching designations:", error);
+      return c.json({ error: "Failed to fetch designations" }, 500);
+    }
+  })
+  .post(
+    "/designations",
+    sessionMiddleware,
+    zValidator("json", z.object({
+      name: z.string().min(2, "Designation name must be at least 2 characters"),
+    })),
+    async (c) => {
+      try {
+        const { name } = c.req.valid("json");
+
+        const [designation] = await db
+          .insert(customDesignations)
+          .values({ name })
+          .returning();
+
+        return c.json({ data: designation });
+      } catch (error: any) {
+        // Check for duplicate key error (PostgreSQL error code 23505)
+        if (error.cause?.code === '23505' || error.code === '23505') {
+          return c.json({ error: "This designation already exists" }, 409);
+        }
+        
+        return c.json({ error: error.message || "Failed to create designation" }, 500);
+      }
+    }
+  )
   .get("/:userId", sessionMiddleware, async (c) => {
     try {
       const userId = c.req.param("userId");

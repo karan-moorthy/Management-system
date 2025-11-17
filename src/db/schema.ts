@@ -124,7 +124,7 @@ export const tasks = pgTable('tasks', {
   workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
   
   // Upload tracking for batch operations
-  uploadBatchId: uuid('upload_batch_id'), // Track which CSV upload this task came from
+  uploadBatchId: text('upload_batch_id'), // Track which CSV upload this task came from (human-readable format)
   uploadedAt: timestamp('uploaded_at'), // When this task was uploaded
   uploadedBy: uuid('uploaded_by').references(() => users.id), // Who uploaded this task
   
@@ -191,4 +191,30 @@ export const attendance = pgTable('attendance', {
   dateIdx: index('attendance_date_idx').on(table.shiftStartTime),
   statusIdx: index('attendance_status_idx').on(table.status),
   userDateIdx: index('attendance_user_date_idx').on(table.userId, table.shiftStartTime),
+}));
+
+// Custom designations table - for user-added designations
+export const customDesignations = pgTable('custom_designations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  nameIdx: index('custom_designations_name_idx').on(table.name),
+}));
+
+// Project requirements table
+export const projectRequirements = pgTable('project_requirements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tentativeTitle: text('tentative_title').notNull(),
+  customer: text('customer').notNull(),
+  projectManagerId: uuid('project_manager_id').references(() => users.id),
+  projectDescription: text('project_description'),
+  sampleInputFiles: jsonb('sample_input_files').$type<string[]>().default([]), // Array of file URLs/paths
+  expectedOutputFiles: jsonb('expected_output_files').$type<string[]>().default([]), // Array of file URLs/paths
+  status: text('status').notNull().default('PENDING'), // PENDING, APPROVED, REJECTED
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  projectManagerIdx: index('requirements_project_manager_idx').on(table.projectManagerId),
+  statusIdx: index('requirements_status_idx').on(table.status),
 }));

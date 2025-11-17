@@ -43,9 +43,12 @@ export interface Project {
   id: string;
   name: string;
   imageUrl?: string;
-  workspaceId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  workspaceId: string | null;
+  postDate?: Date | string | null;
+  tentativeEndDate?: Date | string | null;
+  assignees?: string[] | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 // Member related types

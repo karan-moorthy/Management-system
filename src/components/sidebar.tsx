@@ -130,10 +130,10 @@ export const Sidebar = () => {
         {expandedSections.includes("Projects") && (
           <nav className="flex flex-col gap-1 ml-4 mt-1">
             <Link
-              href="/projects"
+              href="/add-requirements"
               className={cn(
                 "flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground",
-                pathname === "/projects" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
+                pathname === "/add-requirements" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
               )}
             >
               <GoCheckCircle className="size-4" />
