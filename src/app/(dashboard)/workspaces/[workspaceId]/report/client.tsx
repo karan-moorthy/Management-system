@@ -28,7 +28,7 @@ export const ReportClient = () => {
 
   const { data: analytics, isLoading: isLoadingAnalytics } =
     useGetWorkspaceAnalytics({ workspaceId });
-  const { data: tasksData, isLoading: isLoadingTasks } = useGetTasks({ workspaceId });
+  const { data: tasksData, isLoading: isLoadingTasks } = useGetTasks({ workspaceId, limit: 2000 });
   const { data: projectsData, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: membersData, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 

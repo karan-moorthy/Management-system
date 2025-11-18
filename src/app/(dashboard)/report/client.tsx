@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardCharts } from "@/components/dashboard-charts";
+import { JiraDashboard } from "@/components/jira-dashboard";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import jsPDF from "jspdf";
@@ -12,7 +12,7 @@ import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { Task, TaskStatus } from "@/features/tasks/types";
 
 export const ReportClient = () => {
-  const { data: tasksData } = useGetTasks({});
+  const { data: tasksData } = useGetTasks({ limit: 2000 });
   const { data: projects } = useGetProjects({});
   
   const tasks = (tasksData?.documents as Task[]) || [];
@@ -99,7 +99,7 @@ export const ReportClient = () => {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Reports</h1>
-          <p className="text-muted-foreground">Export and analyze project data</p>
+          <p className="text-muted-foreground">Monitor all of your projects and tasks here.</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={exportToPDF} variant="outline">
@@ -112,7 +112,7 @@ export const ReportClient = () => {
           </Button>
         </div>
       </div>
-      <DashboardCharts showFilters={true} />
+      <JiraDashboard />
     </div>
   );
 };

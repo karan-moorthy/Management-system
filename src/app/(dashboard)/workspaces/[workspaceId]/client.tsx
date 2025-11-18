@@ -38,9 +38,9 @@ export const WorkspaceIdClient = () => {
   
   const { data: analytics, isLoading: isLoadingAnalytics } =
     useGetWorkspaceAnalytics({ workspaceId });
-  const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
+    const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
     workspaceId,
-    projectId: projectId || undefined,
+    limit: 2000,
   });
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({
     workspaceId,

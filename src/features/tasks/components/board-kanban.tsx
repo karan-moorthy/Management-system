@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -30,7 +30,20 @@ interface BoardKanbanProps {
   ) => void;
 }
 
+// Windowing configuration for performance
+const INITIAL_RENDER_COUNT = 20;
+const RENDER_BUFFER = 10;
+
 export const BoardKanban = ({ data, onChange }: BoardKanbanProps) => {
+  // Track visible range per column for windowing
+  const [visibleRanges, setVisibleRanges] = useState<Record<TaskStatus, number>>({
+    [TaskStatus.BACKLOG]: INITIAL_RENDER_COUNT,
+    [TaskStatus.TODO]: INITIAL_RENDER_COUNT,
+    [TaskStatus.IN_PROGRESS]: INITIAL_RENDER_COUNT,
+    [TaskStatus.IN_REVIEW]: INITIAL_RENDER_COUNT,
+    [TaskStatus.DONE]: INITIAL_RENDER_COUNT,
+  });
+
   const [tasks, setTasks] = useState<TasksState>(() => {
     const initialTasks: TasksState = {
       [TaskStatus.BACKLOG]: [],
@@ -73,7 +86,8 @@ export const BoardKanban = ({ data, onChange }: BoardKanbanProps) => {
     return initialTasks;
   });
 
-  useEffect(() => {
+  // Memoize sorted tasks to avoid re-sorting on every render
+  const sortedTasks = useMemo(() => {
     const newTasks: TasksState = {
       [TaskStatus.BACKLOG]: [],
       [TaskStatus.TODO]: [],
@@ -91,14 +105,12 @@ export const BoardKanban = ({ data, onChange }: BoardKanbanProps) => {
       newTasks[status as TaskStatus].sort((a, b) => {
         // Special sorting for TODO column: prioritize by due date
         if (status === TaskStatus.TODO) {
-          // Tasks with due dates come first
           const aHasDueDate = a.dueDate && a.dueDate.trim() !== '';
           const bHasDueDate = b.dueDate && b.dueDate.trim() !== '';
           
           if (aHasDueDate && !bHasDueDate) return -1;
           if (!aHasDueDate && bHasDueDate) return 1;
           
-          // If both have due dates, sort by due date (earliest first)
           if (aHasDueDate && bHasDueDate) {
             const dateA = new Date(a.dueDate!);
             const dateB = new Date(b.dueDate!);
@@ -107,13 +119,16 @@ export const BoardKanban = ({ data, onChange }: BoardKanbanProps) => {
           }
         }
         
-        // Fallback to position sorting for all other cases
         return a.position - b.position;
       });
     });
 
-    setTasks(newTasks);
+    return newTasks;
   }, [data]);
+
+  useEffect(() => {
+    setTasks(sortedTasks);
+  }, [sortedTasks]);
 
   const onDragEnd = useCallback(
     (result: DropResult) => {
@@ -186,20 +201,43 @@ export const BoardKanban = ({ data, onChange }: BoardKanbanProps) => {
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex overflow-x-auto">
         {boards.map((board) => {
+          const columnTasks = tasks[board];
+          const visibleCount = visibleRanges[board];
+          const hasMore = columnTasks.length > visibleCount;
+          
+          // Only render visible tasks for performance
+          const visibleTasks = columnTasks.slice(0, visibleCount);
+          
+          const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+            const target = e.currentTarget;
+            const scrollTop = target.scrollTop;
+            const scrollHeight = target.scrollHeight;
+            const clientHeight = target.clientHeight;
+            
+            // Load more when scrolled near bottom (80% threshold)
+            if (scrollTop + clientHeight >= scrollHeight * 0.8 && hasMore) {
+              setVisibleRanges(prev => ({
+                ...prev,
+                [board]: Math.min(prev[board] + RENDER_BUFFER, columnTasks.length)
+              }));
+            }
+          };
+          
           return (
             <div
               key={board}
               className="flex-1 mx-2 bg-muted p-1.5 rounded-md min-h-[200px]"
             >
-              <KanbanColumnHeader board={board} taskCount={tasks[board].length} />
+              <KanbanColumnHeader board={board} taskCount={columnTasks.length} />
               <Droppable droppableId={board}>
                 {(provided) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="min-h-[200px] py-1.5"
+                    className="min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto py-1.5"
+                    onScroll={handleScroll}
                   >
-                    {tasks[board].map((task, index) => (
+                    {visibleTasks.map((task, index) => (
                       <Draggable
                         key={task.id}
                         draggableId={task.id}
@@ -217,6 +255,11 @@ export const BoardKanban = ({ data, onChange }: BoardKanbanProps) => {
                       </Draggable>
                     ))}
                     {provided.placeholder}
+                    {hasMore && (
+                      <div className="text-center py-2 text-xs text-muted-foreground">
+                        Scroll to load more ({columnTasks.length - visibleCount} remaining)
+                      </div>
+                    )}
                   </div>
                 )}
               </Droppable>

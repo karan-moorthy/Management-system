@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCreateRequirement } from "@/features/requirements/api/use-create-requirement";
 import { useGetProfiles } from "@/features/requirements/api/use-get-profiles";
@@ -33,13 +33,10 @@ export default function AddRequirementsPage() {
   
   const [sampleInputFiles, setSampleInputFiles] = useState<FileUploadRow[]>([
     { id: "sample-1", file: null },
-    { id: "sample-2", file: null },
-    { id: "sample-3", file: null },
   ]);
   
   const [expectedOutputFiles, setExpectedOutputFiles] = useState<FileUploadRow[]>([
     { id: "output-1", file: null },
-    { id: "output-2", file: null },
   ]);
 
   const handleAddSampleInputRow = () => {
@@ -70,6 +67,24 @@ export default function AddRequirementsPage() {
         row.id === id ? { ...row, file } : row
       )
     );
+  };
+
+  const handleRemoveSampleFile = (id: string) => {
+    if (sampleInputFiles.length > 1) {
+      setSampleInputFiles(sampleInputFiles.filter((row) => row.id !== id));
+    } else {
+      // If it's the last row, just clear the file instead of removing the row
+      setSampleInputFiles([{ id: "sample-1", file: null }]);
+    }
+  };
+
+  const handleRemoveOutputFile = (id: string) => {
+    if (expectedOutputFiles.length > 1) {
+      setExpectedOutputFiles(expectedOutputFiles.filter((row) => row.id !== id));
+    } else {
+      // If it's the last row, just clear the file instead of removing the row
+      setExpectedOutputFiles([{ id: "output-1", file: null }]);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -223,26 +238,48 @@ export default function AddRequirementsPage() {
                   <label className="text-sm font-medium md:text-right">
                     File {index + 1}
                   </label>
-                  <div className="md:col-span-3 flex items-center gap-3">
-                    <Input
-                      type="file"
-                      onChange={(e) =>
-                        handleSampleFileChange(
-                          row.id,
-                          e.target.files?.[0] || null
-                        )
-                      }
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="shrink-0 px-4"
-                    >
-                      <Upload className="h-4 w-4 mr-1" />
-                      Upload
-                    </Button>
+                  <div className="md:col-span-3">
+                    {row.file ? (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 p-3 bg-muted rounded-md border flex items-center justify-between">
+                          <span className="text-sm truncate">{row.file.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({(row.file.size / 1024).toFixed(2)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveSampleFile(row.id)}
+                          className="shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="file"
+                          onChange={(e) =>
+                            handleSampleFileChange(
+                              row.id,
+                              e.target.files?.[0] || null
+                            )
+                          }
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="shrink-0 px-4"
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -271,26 +308,48 @@ export default function AddRequirementsPage() {
                   <label className="text-sm font-medium md:text-right">
                     File {index + 1}
                   </label>
-                  <div className="md:col-span-3 flex items-center gap-3">
-                    <Input
-                      type="file"
-                      onChange={(e) =>
-                        handleOutputFileChange(
-                          row.id,
-                          e.target.files?.[0] || null
-                        )
-                      }
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="shrink-0 px-4"
-                    >
-                      <Upload className="h-4 w-4 mr-1" />
-                      Upload
-                    </Button>
+                  <div className="md:col-span-3">
+                    {row.file ? (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 p-3 bg-muted rounded-md border flex items-center justify-between">
+                          <span className="text-sm truncate">{row.file.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({(row.file.size / 1024).toFixed(2)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveOutputFile(row.id)}
+                          className="shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="file"
+                          onChange={(e) =>
+                            handleOutputFileChange(
+                              row.id,
+                              e.target.files?.[0] || null
+                            )
+                          }
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="shrink-0 px-4"
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

@@ -1,4 +1,5 @@
 import { MoreHorizontalIcon, TagIcon, UserIcon, CalendarIcon, Clock, CheckCircleIcon } from "lucide-react";
+import { memo } from "react";
 
 import { DottedSeparator } from "@/components/dotted-separator";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ interface KanbanCardProps {
   task: Task;
 }
 
-export const KanbanCard = ({ task }: KanbanCardProps) => {
+const KanbanCardComponent = ({ task }: KanbanCardProps) => {
   // Helper function to format date and time
   const formatDateTime = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -209,3 +210,6 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
     </div>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const KanbanCard = memo(KanbanCardComponent);

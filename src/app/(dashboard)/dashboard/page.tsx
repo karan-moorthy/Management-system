@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrent } from "@/features/auth/queries";
-import { DashboardCharts } from "@/components/dashboard-charts";
+import { JiraDashboard } from "@/components/jira-dashboard";
 
 const DashboardPage = async () => {
   const user = await getCurrent();
@@ -10,9 +10,9 @@ const DashboardPage = async () => {
     <div className="h-full flex flex-col p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {user.name}</p>
+        <p className="text-muted-foreground">Monitor all of your projects and tasks here.</p>
       </div>
-      <DashboardCharts showFilters={true} />
+      <JiraDashboard />
     </div>
   );
 };

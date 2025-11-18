@@ -52,6 +52,7 @@ export const TaskViewSwitcher = ({
     assigneeId,
     status,
     dueDate,
+    limit: 2000, // Support large CSV uploads (e.g., 1276 rows)
   });
 
   const onKanbanChange = useCallback(

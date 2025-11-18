@@ -57,6 +57,7 @@ export const DashboardCharts = ({ showFilters = true }: DashboardChartsProps) =>
   const { data: tasksData } = useGetTasks({
     projectId: selectedProject !== "all" ? selectedProject : undefined,
     assigneeId: selectedEmployee !== "all" ? selectedEmployee : undefined,
+    limit: 2000,
   });
 
   const tasks = (tasksData?.documents as Task[]) || [];

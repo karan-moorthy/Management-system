@@ -11,6 +11,8 @@ interface UseGetTasksProps {
   assigneeId?: string | null;
   dueDate?: string | null;
   search?: string | null;
+  limit?: number;
+  offset?: number;
 }
 
 export const useGetTasks = ({
@@ -20,6 +22,8 @@ export const useGetTasks = ({
   assigneeId,
   dueDate,
   search,
+  limit = 500, // Default to 500 to handle large datasets
+  offset = 0,
 }: UseGetTasksProps) => {
   const query = useQuery({
     queryKey: [
@@ -30,6 +34,8 @@ export const useGetTasks = ({
       assigneeId,
       dueDate,
       search,
+      limit,
+      offset,
     ],
     queryFn: async () => {
       const response = await client.api.tasks.$get({
@@ -40,6 +46,8 @@ export const useGetTasks = ({
           assigneeId: assigneeId ?? undefined,
           dueDate: dueDate ?? undefined,
           search: search ?? undefined,
+          limit: limit?.toString(),
+          offset: offset?.toString(),
         },
       });
 

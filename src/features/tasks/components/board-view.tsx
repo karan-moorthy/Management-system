@@ -20,6 +20,7 @@ export const BoardView = () => {
     assigneeId,
     search,
     dueDate,
+    limit: 2000,
   });
 
   const { mutate: bulkUpdate } = useBulkUpdateTasks();
