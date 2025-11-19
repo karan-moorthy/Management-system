@@ -5,9 +5,10 @@ import { eq, and, desc, or, like, sql, inArray } from "drizzle-orm";
 
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { db } from "@/db";
-import { tasks, projects, users } from "@/db/schema";
+import { tasks, projects, users, activityLogs } from "@/db/schema";
 import { getMember } from "@/features/members/utils";
 import { MemberRole } from "@/features/members/types";
+import { ActivityAction, EntityType } from "@/features/activity/types";
 
 import { createTaskSchema } from "../schemas";
 import { TaskStatus, TaskPriority, IssueType, Resolution } from "../types";
@@ -121,6 +122,30 @@ const app = new Hono()
 
     await db.delete(tasks).where(eq(tasks.id, taskId));
 
+    // Log task deletion activity
+    try {
+      await db.insert(activityLogs).values({
+        actionType: ActivityAction.TASK_DELETED,
+        entityType: EntityType.TASK,
+        entityId: task.id,
+        userId: user.id,
+        userName: user.name,
+        workspaceId: task.workspaceId || null,
+        projectId: task.projectId || null,
+        taskId: task.id,
+        summary: `${user.name} deleted task "${task.summary}"`,
+        changes: {
+          metadata: {
+            taskSummary: task.summary,
+            taskStatus: task.status,
+            taskIssueId: task.issueId,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Failed to log task deletion activity:', error);
+    }
+
     return c.json({ data: { id: task.id } });
   })
   .get(
@@ -189,33 +214,90 @@ const app = new Hono()
         );
       }
 
+      // Optimized query with JOINs to fetch all data in one query
       const taskList = await db
-        .select()
+        .select({
+          // Task fields
+          id: tasks.id,
+          summary: tasks.summary,
+          issueId: tasks.issueId,
+          issueType: tasks.issueType,
+          status: tasks.status,
+          projectName: tasks.projectName,
+          priority: tasks.priority,
+          resolution: tasks.resolution,
+          assigneeId: tasks.assigneeId,
+          reporterId: tasks.reporterId,
+          creatorId: tasks.creatorId,
+          created: tasks.created,
+          updated: tasks.updated,
+          resolved: tasks.resolved,
+          dueDate: tasks.dueDate,
+          labels: tasks.labels,
+          description: tasks.description,
+          projectId: tasks.projectId,
+          workspaceId: tasks.workspaceId,
+          uploadBatchId: tasks.uploadBatchId,
+          uploadedAt: tasks.uploadedAt,
+          uploadedBy: tasks.uploadedBy,
+          estimatedHours: tasks.estimatedHours,
+          actualHours: tasks.actualHours,
+          position: tasks.position,
+          // Assignee fields (nullable)
+          assigneeName: users.name,
+          assigneeEmail: users.email,
+          assigneeImage: users.image,
+          // Project fields (nullable)
+          projectImageUrl: projects.imageUrl,
+        })
         .from(tasks)
+        .leftJoin(users, eq(tasks.assigneeId, users.id))
+        .leftJoin(projects, eq(tasks.projectId, projects.id))
         .where(and(...conditions))
         .orderBy(desc(tasks.created))
         .limit(Math.min(limit || 100, 2000)) // Max 2000 tasks per request to support large CSV uploads
         .offset(offset || 0);
 
-      // Get unique assignee and project IDs (filter out nulls)
-      const assigneeIds = Array.from(new Set(taskList.map((t) => t.assigneeId).filter(Boolean))) as string[];
-      const projectIds = Array.from(new Set(taskList.map((t) => t.projectId).filter(Boolean))) as string[];
-
-      // Fetch assignees
-      const assignees = assigneeIds.length > 0
-        ? await db.select().from(users).where(inArray(users.id, assigneeIds))
-        : [];
-
-      // Fetch projects  
-      const projectsData = projectIds.length > 0
-        ? await db.select().from(projects).where(inArray(projects.id, projectIds))
-        : [];
-
-      // Populate tasks with assignee and project data
-      const populatedTasks = taskList.map((task) => ({
-        ...task,
-        assignee: assignees.find((a) => a.id === task.assigneeId),
-        project: projectsData.find((p) => p.id === task.projectId),
+      // Transform the flat result into the expected structure
+      const populatedTasks = taskList.map((row) => ({
+        id: row.id,
+        summary: row.summary,
+        issueId: row.issueId,
+        issueType: row.issueType,
+        status: row.status,
+        projectName: row.projectName,
+        priority: row.priority,
+        resolution: row.resolution,
+        assigneeId: row.assigneeId,
+        reporterId: row.reporterId,
+        creatorId: row.creatorId,
+        created: row.created,
+        updated: row.updated,
+        resolved: row.resolved,
+        dueDate: row.dueDate,
+        labels: row.labels,
+        description: row.description,
+        projectId: row.projectId,
+        workspaceId: row.workspaceId,
+        uploadBatchId: row.uploadBatchId,
+        uploadedAt: row.uploadedAt,
+        uploadedBy: row.uploadedBy,
+        estimatedHours: row.estimatedHours,
+        actualHours: row.actualHours,
+        position: row.position,
+        // Only include assignee if exists
+        assignee: row.assigneeId ? {
+          id: row.assigneeId,
+          name: row.assigneeName,
+          email: row.assigneeEmail,
+          image: row.assigneeImage,
+        } : undefined,
+        // Only include project if exists
+        project: row.projectId ? {
+          id: row.projectId,
+          name: row.projectName,
+          imageUrl: row.projectImageUrl,
+        } : undefined,
       }));
 
       return c.json({
@@ -285,11 +367,32 @@ const app = new Hono()
         ? highestPositionTask.position + 1000
         : 1000;
 
+      // Generate unique issue ID if not provided or if duplicate
+      let finalIssueId = issueId;
+      if (!finalIssueId) {
+        // Auto-generate if not provided
+        const timestamp = Date.now();
+        finalIssueId = `TASK-${timestamp}`;
+      } else {
+        // Check if issue ID already exists
+        const [existingTask] = await db
+          .select()
+          .from(tasks)
+          .where(eq(tasks.issueId, finalIssueId))
+          .limit(1);
+        
+        if (existingTask) {
+          // Append timestamp to make it unique
+          const timestamp = Date.now();
+          finalIssueId = `${issueId}-${timestamp}`;
+        }
+      }
+
       const [task] = await db
         .insert(tasks)
         .values({
           summary,
-          issueId,
+          issueId: finalIssueId,
           issueType: issueType || "Task",
           status,
           projectName,
@@ -308,6 +411,33 @@ const app = new Hono()
           position: newPosition,
         })
         .returning();
+
+      // Log task creation activity
+      try {
+        console.log(`📝 Logging task creation: ${task.summary}`);
+        await db.insert(activityLogs).values({
+          actionType: ActivityAction.TASK_CREATED,
+          entityType: EntityType.TASK,
+          entityId: task.id,
+          userId: user.id,
+          userName: user.name,
+          workspaceId: workspaceId || null,
+          projectId: projectId || null,
+          taskId: task.id,
+          summary: `${user.name} created task "${task.summary}"`,
+          changes: {
+            metadata: {
+              taskSummary: task.summary,
+              taskStatus: task.status,
+              taskPriority: task.priority,
+              taskIssueId: task.issueId,
+            },
+          },
+        });
+        console.log(`✅ Task creation activity logged successfully`);
+      } catch (error) {
+        console.error('❌ Failed to log task creation activity:', error);
+      }
 
       return c.json({ data: task });
     }
@@ -373,6 +503,154 @@ const app = new Hono()
         })
         .where(eq(tasks.id, taskId))
         .returning();
+
+      // Log activity based on what changed
+      const changes: Record<string, { before: any; after: any }> = {};
+      
+      // Detect status change
+      if (updates.status && updates.status !== existingTask.status) {
+        changes.status = { before: existingTask.status, after: updates.status };
+        try {
+          console.log(`🔄 Logging status change: ${existingTask.status} → ${updates.status}`);
+          await db.insert(activityLogs).values({
+            actionType: ActivityAction.STATUS_CHANGED,
+            entityType: EntityType.TASK,
+            entityId: task.id,
+            userId: user.id,
+            userName: user.name,
+            workspaceId: existingTask.workspaceId || null,
+            projectId: existingTask.projectId || null,
+            taskId: task.id,
+            summary: `${user.name} changed status from ${existingTask.status} to ${updates.status}`,
+            changes: {
+              ...changes,
+              metadata: {
+                taskSummary: task.summary,
+                oldStatus: existingTask.status,
+                newStatus: updates.status,
+              },
+            },
+          });
+          console.log(`✅ Status change activity logged`);
+        } catch (error) {
+          console.error('❌ Failed to log status change activity:', error);
+        }
+      }
+
+      // Detect assignee change
+      if (updates.assigneeId !== undefined && updates.assigneeId !== existingTask.assigneeId) {
+        changes.assigneeId = { before: existingTask.assigneeId, after: updates.assigneeId };
+        const assigneeName = updates.assigneeId ? "a team member" : "unassigned";
+        try {
+          await db.insert(activityLogs).values({
+            actionType: ActivityAction.ASSIGNED,
+            entityType: EntityType.TASK,
+            entityId: task.id,
+            userId: user.id,
+            userName: user.name,
+            workspaceId: existingTask.workspaceId || null,
+            projectId: existingTask.projectId || null,
+            taskId: task.id,
+            summary: updates.assigneeId 
+              ? `${user.name} assigned task to ${assigneeName}`
+              : `${user.name} unassigned task`,
+            changes: {
+              ...changes,
+              metadata: {
+                taskSummary: task.summary,
+                assigneeId: updates.assigneeId,
+              },
+            },
+          });
+        } catch (error) {
+          console.error('Failed to log assignee change activity:', error);
+        }
+      }
+
+      // Detect priority change
+      if (updates.priority && updates.priority !== existingTask.priority) {
+        changes.priority = { before: existingTask.priority, after: updates.priority };
+        try {
+          await db.insert(activityLogs).values({
+            actionType: ActivityAction.PRIORITY_CHANGED,
+            entityType: EntityType.TASK,
+            entityId: task.id,
+            userId: user.id,
+            userName: user.name,
+            workspaceId: existingTask.workspaceId || null,
+            projectId: existingTask.projectId || null,
+            taskId: task.id,
+            summary: `${user.name} changed priority from ${existingTask.priority} to ${updates.priority}`,
+            changes: {
+              ...changes,
+              metadata: {
+                taskSummary: task.summary,
+                oldPriority: existingTask.priority,
+                newPriority: updates.priority,
+              },
+            },
+          });
+        } catch (error) {
+          console.error('Failed to log priority change activity:', error);
+        }
+      }
+
+      // Detect due date change
+      if (updates.dueDate !== undefined) {
+        const oldDate = existingTask.dueDate ? new Date(existingTask.dueDate).toISOString() : null;
+        const newDate = updates.dueDate ? new Date(updates.dueDate).toISOString() : null;
+        if (oldDate !== newDate) {
+          changes.dueDate = { before: oldDate, after: newDate };
+          try {
+            await db.insert(activityLogs).values({
+              actionType: ActivityAction.DUE_DATE_CHANGED,
+              entityType: EntityType.TASK,
+              entityId: task.id,
+              userId: user.id,
+              userName: user.name,
+              workspaceId: existingTask.workspaceId || null,
+              projectId: existingTask.projectId || null,
+              taskId: task.id,
+              summary: newDate 
+                ? `${user.name} set due date to ${new Date(newDate).toLocaleDateString()}`
+                : `${user.name} removed due date`,
+              changes: {
+                ...changes,
+                metadata: {
+                  taskSummary: task.summary,
+                  dueDate: newDate,
+                },
+              },
+            });
+          } catch (error) {
+            console.error('Failed to log due date change activity:', error);
+          }
+        }
+      }
+
+      // Detect description change
+      if (updates.description !== undefined && updates.description !== existingTask.description) {
+        try {
+          await db.insert(activityLogs).values({
+            actionType: ActivityAction.DESCRIPTION_UPDATED,
+            entityType: EntityType.TASK,
+            entityId: task.id,
+            userId: user.id,
+            userName: user.name,
+            workspaceId: existingTask.workspaceId || null,
+            projectId: existingTask.projectId || null,
+            taskId: task.id,
+            summary: `${user.name} updated the description`,
+            changes: {
+              metadata: {
+                taskSummary: task.summary,
+              },
+            },
+          });
+        } catch (error) {
+          console.error('Failed to log description change activity:', error);
+        }
+      }
 
       return c.json({ data: task });
     }
@@ -512,6 +790,44 @@ const app = new Hono()
         
         return results;
       });
+
+      // Log column move activity for tasks that changed status
+      for (const taskUpdate of tasksToUpdate) {
+        const existingTask = existingTasks.find(t => t.id === taskUpdate.id);
+        const updatedTask = updatedTasks.find(t => t.id === taskUpdate.id);
+        
+        if (existingTask && updatedTask && existingTask.status !== taskUpdate.status) {
+          try {
+            console.log(`📋 Logging column move: ${existingTask.status} → ${taskUpdate.status} for task: ${updatedTask.summary}`);
+            await db.insert(activityLogs).values({
+              actionType: ActivityAction.COLUMN_MOVED,
+              entityType: EntityType.TASK,
+              entityId: updatedTask.id,
+              userId: user.id,
+              userName: user.name,
+              workspaceId: existingTask.workspaceId || null,
+              projectId: existingTask.projectId || null,
+              taskId: updatedTask.id,
+              summary: `${user.name} moved task from ${existingTask.status} to ${taskUpdate.status}`,
+              changes: {
+                field: 'status',
+                oldValue: existingTask.status,
+                newValue: taskUpdate.status,
+                metadata: {
+                  taskSummary: updatedTask.summary,
+                  oldStatus: existingTask.status,
+                  newStatus: taskUpdate.status,
+                  oldPosition: existingTask.position,
+                  newPosition: taskUpdate.position,
+                },
+              },
+            });
+            console.log(`✅ Column move activity logged successfully`);
+          } catch (error) {
+            console.error('❌ Failed to log column move activity:', error);
+          }
+        }
+      }
 
       return c.json({ data: updatedTasks });
     }

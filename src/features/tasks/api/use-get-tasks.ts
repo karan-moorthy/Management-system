@@ -22,12 +22,14 @@ export const useGetTasks = ({
   assigneeId,
   dueDate,
   search,
-  limit = 500, // Default to 500 to handle large datasets
+  limit = 2000,  // Increased to support showing all tasks
   offset = 0,
 }: UseGetTasksProps) => {
   const query = useQuery({
     queryKey: ["tasks", workspaceId, projectId, status, assigneeId, dueDate, search, limit, offset],
     queryFn: async () => {
+      const startTime = performance.now();
+      
       const response = await client.api.tasks.$get({
         query: {
           workspaceId: workspaceId ?? undefined,
@@ -46,12 +48,25 @@ export const useGetTasks = ({
       }
 
       const { data } = await response.json();
+      
+      const endTime = performance.now();
+      const fetchTime = endTime - startTime;
+      
+      // Log performance metrics
+      if (fetchTime > 1000) {
+        console.warn(`⚠️ Slow task fetch: ${fetchTime.toFixed(0)}ms for ${data.documents.length} tasks`);
+      } else {
+        console.log(`✅ Task fetch: ${fetchTime.toFixed(0)}ms for ${data.documents.length} tasks`);
+      }
 
       return data;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes - prevents unnecessary refetches while editing
-    refetchOnWindowFocus: false, // Don't refetch on focus (saves API calls)
-    refetchOnMount: false, // Don't refetch if data is fresh
+    staleTime: 5 * 60 * 1000,      // 5 minutes - cache longer for better performance
+    gcTime: 10 * 60 * 1000,        // 10 minutes - keep in cache longer
+    refetchOnWindowFocus: false,    // Don't refetch on focus (saves API calls)
+    refetchOnMount: false,          // Don't refetch if data is fresh
+    retry: 2,                       // Retry failed requests twice
+    retryDelay: 1000,              // Wait 1 second between retries
   });
 
   return query;

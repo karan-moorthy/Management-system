@@ -231,3 +231,47 @@ export const projectRequirements = pgTable('project_requirements', {
   statusIdx: index('requirements_status_idx').on(table.status),
   dueDateIdx: index('requirements_due_date_idx').on(table.dueDate),
 }));
+
+// Activity Logs table - Jira-style comprehensive activity tracking
+export const activityLogs = pgTable('activity_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // Core fields
+  actionType: text('action_type').notNull(), // TASK_CREATED, TASK_UPDATED, STATUS_CHANGED, ASSIGNED, etc.
+  entityType: text('entity_type').notNull(), // TASK, PROJECT, USER, WORKSPACE
+  entityId: uuid('entity_id').notNull(), // ID of the affected entity
+  
+  // User who performed the action
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userName: text('user_name').notNull(), // Denormalized for faster queries
+  
+  // Context
+  workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+  
+  // Change details (JSON for flexibility)
+  changes: jsonb('changes').$type<{
+    field?: string; // Which field changed (status, assignee, priority, etc.)
+    oldValue?: string | null;
+    newValue?: string | null;
+    description?: string; // Human-readable description
+    metadata?: Record<string, any>; // Additional data
+  }>(),
+  
+  // Summary for quick display
+  summary: text('summary').notNull(), // "Karan changed status from To Do to In Progress"
+  
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  // Indexes for fast queries
+  entityIdx: index('activity_logs_entity_idx').on(table.entityType, table.entityId),
+  userIdx: index('activity_logs_user_idx').on(table.userId),
+  workspaceIdx: index('activity_logs_workspace_idx').on(table.workspaceId),
+  taskIdx: index('activity_logs_task_idx').on(table.taskId),
+  projectIdx: index('activity_logs_project_idx').on(table.projectId),
+  createdAtIdx: index('activity_logs_created_at_idx').on(table.createdAt),
+  actionTypeIdx: index('activity_logs_action_type_idx').on(table.actionType),
+  // Composite index for common queries
+  workspaceCreatedIdx: index('activity_logs_workspace_created_idx').on(table.workspaceId, table.createdAt),
+}));

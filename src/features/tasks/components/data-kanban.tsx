@@ -1,15 +1,19 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import { FixedSizeList as List } from "react-window";
+import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 
 import { KanbanCard } from "./kanban-card";
 import { KanbanColumnHeader } from "./kanban-column-header";
 
 import { Task, TaskStatus } from "../types";
+import "./kanban-optimizations.css";
 
 const boards: TaskStatus[] = [
   TaskStatus.BACKLOG,
@@ -19,8 +23,16 @@ const boards: TaskStatus[] = [
   TaskStatus.DONE,
 ];
 
+// Jira-style: Load only limited tasks per column initially
+const INITIAL_TASKS_PER_COLUMN = 50;
+const LOAD_MORE_BATCH = 25;
+
 type TasksState = {
   [key in TaskStatus]: Task[];
+};
+
+type VisibleTasksState = {
+  [key in TaskStatus]: number; // Number of visible tasks per column
 };
 
 interface DataKanbanProps {
@@ -31,49 +43,44 @@ interface DataKanbanProps {
 }
 
 export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
-  const [tasks, setTasks] = useState<TasksState>(() => {
-    const initialTasks: TasksState = {
-      [TaskStatus.BACKLOG]: [],
-      [TaskStatus.TODO]: [],
-      [TaskStatus.IN_PROGRESS]: [],
-      [TaskStatus.IN_REVIEW]: [],
-      [TaskStatus.DONE]: [],
-    };
-
-    data.forEach((task) => {
-      initialTasks[task.status].push(task);
-    });
-
-    Object.keys(initialTasks).forEach((status) => {
-      initialTasks[status as TaskStatus].sort((a, b) => {
-        // Special sorting for TODO column: prioritize by due date
-        if (status === TaskStatus.TODO) {
-          // Tasks with due dates come first
-          const aHasDueDate = a.dueDate && a.dueDate.trim() !== '';
-          const bHasDueDate = b.dueDate && b.dueDate.trim() !== '';
-          
-          if (aHasDueDate && !bHasDueDate) return -1;
-          if (!aHasDueDate && bHasDueDate) return 1;
-          
-          // If both have due dates, sort by due date (earliest first)
-          if (aHasDueDate && bHasDueDate) {
-            const dateA = new Date(a.dueDate!);
-            const dateB = new Date(b.dueDate!);
-            const dateDiff = dateA.getTime() - dateB.getTime();
-            if (dateDiff !== 0) return dateDiff;
-          }
-        }
-        
-        // Fallback to position sorting for all other cases
-        return a.position - b.position;
-      });
-    });
-
-    return initialTasks;
+  // Track visible task count per column (Jira-style pagination)
+  const [visibleTasks, setVisibleTasks] = useState<VisibleTasksState>({
+    [TaskStatus.BACKLOG]: INITIAL_TASKS_PER_COLUMN,
+    [TaskStatus.TODO]: INITIAL_TASKS_PER_COLUMN,
+    [TaskStatus.IN_PROGRESS]: INITIAL_TASKS_PER_COLUMN,
+    [TaskStatus.IN_REVIEW]: INITIAL_TASKS_PER_COLUMN,
+    [TaskStatus.DONE]: INITIAL_TASKS_PER_COLUMN,
   });
 
-  useEffect(() => {
-    const newTasks: TasksState = {
+  // Memoize the sorting function to avoid recreating it on every render
+  const sortTasks = useCallback((tasks: Task[], status: TaskStatus) => {
+    return [...tasks].sort((a, b) => {
+      // Special sorting for TODO column: prioritize by due date
+      if (status === TaskStatus.TODO) {
+        // Tasks with due dates come first
+        const aHasDueDate = a.dueDate && a.dueDate.trim() !== '';
+        const bHasDueDate = b.dueDate && b.dueDate.trim() !== '';
+        
+        if (aHasDueDate && !bHasDueDate) return -1;
+        if (!aHasDueDate && bHasDueDate) return 1;
+        
+        // If both have due dates, sort by due date (earliest first)
+        if (aHasDueDate && bHasDueDate) {
+          const dateA = new Date(a.dueDate!);
+          const dateB = new Date(b.dueDate!);
+          const dateDiff = dateA.getTime() - dateB.getTime();
+          if (dateDiff !== 0) return dateDiff;
+        }
+      }
+      
+      // Fallback to position sorting for all other cases
+      return a.position - b.position;
+    });
+  }, []);
+
+  // Memoize task organization to avoid recalculating on every render
+  const organizedTasks = useMemo(() => {
+    const tasksByStatus: TasksState = {
       [TaskStatus.BACKLOG]: [],
       [TaskStatus.TODO]: [],
       [TaskStatus.IN_PROGRESS]: [],
@@ -82,36 +89,33 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
     };
 
     data.forEach((task) => {
-      newTasks[task.status].push(task);
+      tasksByStatus[task.status].push(task);
     });
 
-    Object.keys(newTasks).forEach((status) => {
-      newTasks[status as TaskStatus].sort((a, b) => {
-        // Special sorting for TODO column: prioritize by due date
-        if (status === TaskStatus.TODO) {
-          // Tasks with due dates come first
-          const aHasDueDate = a.dueDate && a.dueDate.trim() !== '';
-          const bHasDueDate = b.dueDate && b.dueDate.trim() !== '';
-          
-          if (aHasDueDate && !bHasDueDate) return -1;
-          if (!aHasDueDate && bHasDueDate) return 1;
-          
-          // If both have due dates, sort by due date (earliest first)
-          if (aHasDueDate && bHasDueDate) {
-            const dateA = new Date(a.dueDate!);
-            const dateB = new Date(b.dueDate!);
-            const dateDiff = dateA.getTime() - dateB.getTime();
-            if (dateDiff !== 0) return dateDiff;
-          }
-        }
-        
-        // Fallback to position sorting for all other cases
-        return a.position - b.position;
-      });
+    // Sort each status column
+    Object.keys(tasksByStatus).forEach((status) => {
+      tasksByStatus[status as TaskStatus] = sortTasks(
+        tasksByStatus[status as TaskStatus],
+        status as TaskStatus
+      );
     });
 
-    setTasks(newTasks);
-  }, [data]);
+    return tasksByStatus;
+  }, [data, sortTasks]);
+
+  const [tasks, setTasks] = useState<TasksState>(organizedTasks);
+
+  useEffect(() => {
+    setTasks(organizedTasks);
+  }, [organizedTasks]);
+
+  // Jira-style: Load more tasks handler
+  const loadMoreTasks = useCallback((status: TaskStatus) => {
+    setVisibleTasks((prev) => ({
+      ...prev,
+      [status]: prev[status] + LOAD_MORE_BATCH,
+    }));
+  }, []);
 
   const onDragEnd = useCallback(
     (result: DropResult) => {
@@ -204,35 +208,40 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex overflow-x-auto">
+      <div className="flex overflow-x-auto kanban-horizontal-scroll kanban-board-container">
         {boards.map((board) => {
+          const allColumnTasks = tasks[board];
+          const visibleCount = visibleTasks[board];
+          
+          // Jira-style: Show only limited tasks per column
+          const columnTasks = allColumnTasks.slice(0, visibleCount);
+          const hasMore = allColumnTasks.length > visibleCount;
+          
           return (
             <div
               key={board}
-              className="flex-1 mx-2 bg-muted p-1.5 rounded-md min-w-[200px]"
+              className="flex-1 mx-2 bg-muted p-1.5 rounded-md min-w-[200px] kanban-column"
             >
               <KanbanColumnHeader
                 board={board}
-                taskCount={tasks[board].length}
+                taskCount={allColumnTasks.length}
               />
               <Droppable droppableId={board}>
                 {(provided) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="min-h-[200px] py-1.5"
+                    className="min-h-[200px] py-1.5 max-h-[calc(100vh-250px)] overflow-y-auto kanban-scroll-container"
                   >
-                    {tasks[board].map((task, index) => (
-                      <Draggable
-                        key={task.id}
-                        draggableId={task.id}
-                        index={index}
-                      >
-                        {(provided) => (
+                    {/* Render visible tasks only (Jira-style pagination) */}
+                    {columnTasks.map((task, index) => (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided, snapshot) => (
                           <div
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             ref={provided.innerRef}
+                            className={snapshot.isDragging ? "kanban-card-dragging" : ""}
                           >
                             <KanbanCard task={task} />
                           </div>
@@ -240,6 +249,21 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
                       </Draggable>
                     ))}
                     {provided.placeholder}
+                    
+                    {/* Jira-style: Load More button */}
+                    {hasMore && (
+                      <div className="px-3 py-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => loadMoreTasks(board)}
+                        >
+                          <ChevronDown className="size-4 mr-1" />
+                          Load {Math.min(LOAD_MORE_BATCH, allColumnTasks.length - visibleCount)} more
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </Droppable>

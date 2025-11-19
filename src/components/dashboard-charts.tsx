@@ -26,9 +26,12 @@ import {
   Cell,
 } from "recharts";
 
+import { ActivityTimeline } from "@/features/activity/components/activity-timeline";
+import { useGetActivityLogs } from "@/features/activity/api/use-get-activity-logs";
 import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { useGetMembers } from "@/features/members/api/use-get-members";
 import { useGetTasks } from "@/features/tasks/api/use-get-tasks";
+import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { Task, TaskStatus } from "@/features/tasks/types";
 import { Project } from "@/features/projects/types";
 
@@ -45,6 +48,7 @@ interface DashboardChartsProps {
 }
 
 export const DashboardCharts = ({ showFilters = true }: DashboardChartsProps) => {
+  const workspaceId = useWorkspaceId();
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
@@ -52,12 +56,19 @@ export const DashboardCharts = ({ showFilters = true }: DashboardChartsProps) =>
     to: undefined,
   });
 
-  const { data: projects } = useGetProjects({});
-  const { data: members } = useGetMembers({});
+  const { data: projects } = useGetProjects({ workspaceId });
+  const { data: members } = useGetMembers({ workspaceId });
   const { data: tasksData } = useGetTasks({
+    workspaceId,
     projectId: selectedProject !== "all" ? selectedProject : undefined,
     assigneeId: selectedEmployee !== "all" ? selectedEmployee : undefined,
     limit: 2000,
+  });
+
+  // Fetch activity logs for Recent Activity section (Jira-style)
+  // Note: Not filtering by workspaceId since tasks don't have workspace IDs
+  const { data: activityData, isLoading: isLoadingActivity } = useGetActivityLogs({
+    limit: 20,
   });
 
   const tasks = (tasksData?.documents as Task[]) || [];
@@ -103,15 +114,6 @@ export const DashboardCharts = ({ showFilters = true }: DashboardChartsProps) =>
       completed: completedOnDate,
     };
   });
-
-  // Recent activity (last 10 tasks updated)
-  const recentActivity = [...tasks]
-    .sort((a, b) => {
-      const dateA = new Date(a.updated || a.created);
-      const dateB = new Date(b.updated || b.created);
-      return dateB.getTime() - dateA.getTime();
-    })
-    .slice(0, 10);
 
   return (
     <div className="space-y-4">
@@ -278,40 +280,13 @@ export const DashboardCharts = ({ showFilters = true }: DashboardChartsProps) =>
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-              {recentActivity.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No recent activity
-                </p>
-              ) : (
-                recentActivity.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-accent/50 transition"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{task.summary}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {task.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(task.updated || task.created), "MMM dd, HH:mm")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Recent Activity - Jira-style comprehensive activity timeline */}
+        <ActivityTimeline
+          activities={activityData?.documents || []}
+          isLoading={isLoadingActivity}
+          showGrouping={true}
+          maxHeight="400px"
+        />
       </div>
     </div>
   );

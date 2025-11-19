@@ -212,4 +212,14 @@ const KanbanCardComponent = ({ task }: KanbanCardProps) => {
 };
 
 // Memoize the component to prevent unnecessary re-renders
-export const KanbanCard = memo(KanbanCardComponent);
+// Custom comparison function - only re-render if task actually changed
+export const KanbanCard = memo(KanbanCardComponent, (prevProps, nextProps) => {
+  // Only re-render if task ID, status, position, or updated timestamp changed
+  return (
+    prevProps.task.id === nextProps.task.id &&
+    prevProps.task.status === nextProps.task.status &&
+    prevProps.task.position === nextProps.task.position &&
+    prevProps.task.updated === nextProps.task.updated &&
+    prevProps.task.summary === nextProps.task.summary
+  );
+});

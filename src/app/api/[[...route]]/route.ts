@@ -11,6 +11,7 @@ import attendance from "@/features/attendance/server/route";
 import profiles from "@/features/profiles/server/route";
 import profilesBulkUpload from "@/features/profiles/server/bulk-upload-route";
 import requirements from "@/features/requirements/server/route";
+import activity from "@/features/activity/server/route";
 
 const app = new Hono().basePath("/api");
 
@@ -25,7 +26,8 @@ const routes = app
   .route("/attendance", attendance)
   .route("/profiles", profiles)
   .route("/profiles/bulk-upload", profilesBulkUpload)
-  .route("/requirements", requirements);
+  .route("/requirements", requirements)
+  .route("/activity", activity);
 
 export const GET = handle(app);
 export const POST = handle(app);

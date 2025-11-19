@@ -1,0 +1,101 @@
+/* Kanban Board Performance Optimizations */
+
+/* Enable GPU acceleration for smoother scrolling */
+.kanban-column {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+/* Optimize scrolling performance */
+.kanban-scroll-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+  contain: layout style paint;
+}
+
+/* Smooth scrollbar */
+.kanban-scroll-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.kanban-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.kanban-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.kanban-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dark .kanban-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .kanban-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Optimize card rendering */
+.kanban-card {
+  contain: layout style;
+  content-visibility: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduce paint during drag */
+.kanban-card-dragging {
+  will-change: transform;
+  z-index: 1000;
+}
+
+/* Optimize for large lists */
+.kanban-virtual-item {
+  contain: strict;
+  transform: translateZ(0);
+}
+
+/* Prevent layout thrashing during drag */
+.kanban-board-container {
+  contain: layout;
+}
+
+/* Optimize horizontal scrolling */
+.kanban-horizontal-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Reduce repaints */
+@media (prefers-reduced-motion: no-preference) {
+  .kanban-card {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-card {
+    transition: none;
+  }
+}
+
+/* Performance hint for browser */
+@supports (content-visibility: auto) {
+  .kanban-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100px;
+  }
+}
