@@ -204,6 +204,15 @@ export const customDesignations = pgTable('custom_designations', {
   nameIdx: index('custom_designations_name_idx').on(table.name),
 }));
 
+// Custom departments table - for user-added departments
+export const customDepartments = pgTable('custom_departments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  nameIdx: index('custom_departments_name_idx').on(table.name),
+}));
+
 // Project requirements table
 export const projectRequirements = pgTable('project_requirements', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -41,8 +41,13 @@ export const EventCard = ({
     router.push(`/workspaces/${workspaceId}/tasks/${id}`);
   };
 
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Prevent wheel events from bubbling to parent calendar row
+    e.stopPropagation();
+  };
+
   return (
-    <div className="px-2">
+    <div className="px-2" onWheel={onWheel}>
       <div
         onClick={onClick}
         className={cn(

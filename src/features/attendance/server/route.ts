@@ -191,15 +191,6 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      // Verify user has access to any workspace (just for auth check)
-      const member = await db.query.members.findFirst({
-        where: eq(members.userId, user.id),
-      });
-
-      if (!member) {
-        return c.json({ error: "Unauthorized" }, 401);
-      }
-
       // Get user's own completed attendance records from ALL workspaces
       const records = await db
         .select({

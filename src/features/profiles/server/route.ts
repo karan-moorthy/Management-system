@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
-import { users, customDesignations } from "@/db/schema";
+import { users, customDesignations, customDepartments } from "@/db/schema";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { eq } from "drizzle-orm";
 
@@ -132,6 +132,45 @@ const app = new Hono()
         }
         
         return c.json({ error: error.message || "Failed to create designation" }, 500);
+      }
+    }
+  )
+  .get("/departments", async (c) => {
+    try {
+      const departments = await db
+        .select()
+        .from(customDepartments)
+        .orderBy(customDepartments.name);
+
+      return c.json({ data: departments });
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      return c.json({ error: "Failed to fetch departments" }, 500);
+    }
+  })
+  .post(
+    "/departments",
+    sessionMiddleware,
+    zValidator("json", z.object({
+      name: z.string().min(2, "Department name must be at least 2 characters"),
+    })),
+    async (c) => {
+      try {
+        const { name } = c.req.valid("json");
+
+        const [department] = await db
+          .insert(customDepartments)
+          .values({ name })
+          .returning();
+
+        return c.json({ data: department });
+      } catch (error: any) {
+        // Check for duplicate key error (PostgreSQL error code 23505)
+        if (error.cause?.code === '23505' || error.code === '23505') {
+          return c.json({ error: "This department already exists" }, 409);
+        }
+        
+        return c.json({ error: error.message || "Failed to create department" }, 500);
       }
     }
   )

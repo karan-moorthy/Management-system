@@ -20,6 +20,7 @@
   @apply min-h-[180px];
   @apply border-t;
   @apply border-x;
+  @apply overflow-visible;
 }
 
 :not(.rbc-month-row ~ .rbc-month-row).rbc-month-row {
@@ -35,8 +36,94 @@
   @apply border-none;
 }
 
+/* Ensure each row cell is independent */
+.rbc-row-content {
+  @apply flex;
+}
+
+.rbc-row-segment {
+  @apply flex-1;
+  @apply overflow-hidden;
+}
+
 .rbc-date-cell {
   @apply p-2;
+}
+
+/* Individual day cell container - make each day scrollable independently */
+.rbc-day-bg {
+  @apply relative;
+}
+
+/* Each day's event container should scroll independently */
+.rbc-events-container {
+  @apply overflow-y-auto;
+  @apply max-h-[160px];
+  @apply pr-1;
+  position: relative;
+  /* Prevent scroll chaining - stops scroll from affecting parent/siblings */
+  overscroll-behavior: contain;
+}
+
+/* Alternative: Target each day cell slot */
+.rbc-day-slot {
+  @apply relative;
+}
+
+.rbc-day-slot .rbc-events-container {
+  @apply overflow-y-auto;
+  @apply max-h-[160px];
+  overscroll-behavior: contain;
+  /* Isolate scroll context */
+  isolation: isolate;
+}
+
+/* Ensure row content doesn't interfere */
+.rbc-row-content-scrollable {
+  overflow: visible !important;
+}
+
+.rbc-row-segment {
+  overflow: visible !important;
+}
+
+/* Custom scrollbar styling for day cells */
+.rbc-events-container::-webkit-scrollbar {
+  @apply w-1.5;
+}
+
+.rbc-events-container::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.rbc-events-container::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20;
+  @apply rounded-full;
+}
+
+.rbc-events-container::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
+.rbc-today {
+  @apply bg-blue-50 dark:bg-blue-950/30;
+}
+
+.rbc-off-range-bg {
+  @apply bg-muted/50;
+}
+
+.rbc-events-container::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.rbc-events-container::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20;
+  @apply rounded-full;
+}
+
+.rbc-events-container::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
 }
 
 .rbc-today {

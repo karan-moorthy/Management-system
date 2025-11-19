@@ -102,7 +102,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     <Card className="w-full h-full border-none shadow-none">
       <CardHeader className="flex p-7">
         <CardTitle className="text-xl font-bold">
-          Create a new projects
+          Create a new project
         </CardTitle>
       </CardHeader>
       <div className="px-7">
