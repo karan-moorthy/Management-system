@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import {
   format,
   getDay,
@@ -7,11 +7,18 @@ import {
   startOfWeek,
   addMonths,
   subMonths,
+  isSameDay,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { EventCard } from "./event-card";
 
@@ -70,6 +77,8 @@ export const DataCalendar = ({ data }: DataCalendarProps) => {
   const [value, setValue] = useState(
     data.length > 0 && data[0].dueDate ? new Date(data[0].dueDate) : new Date()
   );
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const events = data.filter(task => task.dueDate).map((task) => ({
     start: new Date(task.dueDate!),
@@ -91,35 +100,82 @@ export const DataCalendar = ({ data }: DataCalendarProps) => {
     }
   };
 
+  const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
+    setSelectedDate(slotInfo.start);
+    setIsDialogOpen(true);
+  };
+
+  const getTasksForDate = (date: Date) => {
+    return data.filter(task => 
+      task.dueDate && isSameDay(new Date(task.dueDate), date)
+    );
+  };
+
+  const tasksForSelectedDate = selectedDate ? getTasksForDate(selectedDate) : [];
+
   return (
-    <Calendar
-      localizer={localizer}
-      date={value}
-      events={events}
-      views={["month"]}
-      defaultView="month"
-      toolbar
-      showAllEvents
-      className="h-full"
-      max={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
-      formats={{
-        weekdayFormat: (date, culture, localizer) =>
-          localizer?.format(date, "EEE", culture) ?? "",
-      }}
-      components={{
-        eventWrapper: ({ event }) => (
-          <EventCard
-            id={event.id}
-            title={event.title}
-            assignee={event.assignee}
-            project={event.project}
-            status={event.status}
-          />
-        ),
-        toolbar: () => (
-          <CustomToolbar date={value} onNavigate={handleNavigate} />
-        ),
-      }}
-    />
+    <>
+      <Calendar
+        localizer={localizer}
+        date={value}
+        events={events}
+        views={["month"]}
+        defaultView="month"
+        toolbar
+        showAllEvents
+        className="h-full"
+        max={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
+        selectable
+        onSelectSlot={handleSelectSlot}
+        formats={{
+          weekdayFormat: (date, culture, localizer) =>
+            localizer?.format(date, "EEE", culture) ?? "",
+        }}
+        components={{
+          eventWrapper: ({ event }) => (
+            <EventCard
+              id={event.id}
+              title={event.title}
+              assignee={event.assignee}
+              project={event.project}
+              status={event.status}
+            />
+          ),
+          toolbar: () => (
+            <CustomToolbar date={value} onNavigate={handleNavigate} />
+          ),
+        }}
+      />
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Tasks for {selectedDate && format(selectedDate, "MMMM d, yyyy")}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3 mt-4">
+            {tasksForSelectedDate.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No tasks scheduled for this date
+              </p>
+            ) : (
+              tasksForSelectedDate.map((task) => (
+                <div key={task.id} className="border rounded-lg p-3 hover:bg-muted/50 transition">
+                  <EventCard
+                    id={task.id}
+                    title={task.summary}
+                    assignee={task.assignee}
+                    project={task.project}
+                    status={task.status}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
