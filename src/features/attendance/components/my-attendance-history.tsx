@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download, Loader2, Clock, CheckCircle2, Edit2, Save, X } from "lucide-react";
+import ExcelJS from 'exceljs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,30 +98,69 @@ export const MyAttendanceHistory = ({ workspaceId }: MyAttendanceHistoryProps = 
     setIsDetailDialogOpen(true);
   };
 
-  const downloadCSV = () => {
+  const downloadCSV = async () => {
     if (!records || records.length === 0) return;
 
-    const headers = ["Date", "Start Time", "End Time", "Duration", "Status", "End Activity", "Tasks"];
-    const rows = records.map((record: any) => [
-      formatDate(record.shiftStartTime),
-      formatTime(record.shiftStartTime),
-      record.shiftEndTime ? formatTime(record.shiftEndTime) : "In Progress",
-      record.totalDuration ? formatDuration(record.totalDuration) : "N/A",
-      record.status,
-      record.endActivity || "N/A",
-      record.dailyTasks ? JSON.stringify(record.dailyTasks).replace(/,/g, "; ") : "N/A",
-    ]);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('My Attendance');
 
-    const csv = [
-      headers.join(","),
-      ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(",")),
-    ].join("\n");
+    // Define columns with proper widths
+    worksheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Start Time', key: 'startTime', width: 12 },
+      { header: 'End Time', key: 'endTime', width: 12 },
+      { header: 'Duration', key: 'duration', width: 12 },
+      { header: 'Status', key: 'status', width: 12 },
+      { header: 'End Activity', key: 'endActivity', width: 20 },
+      { header: 'Tasks', key: 'tasks', width: 50 },
+    ];
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    // Style the header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF9B59B6' } // Purple background
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 20;
+
+    // Add data rows
+    records.forEach((record: any) => {
+      worksheet.addRow({
+        date: formatDate(record.shiftStartTime),
+        startTime: formatTime(record.shiftStartTime),
+        endTime: record.shiftEndTime ? formatTime(record.shiftEndTime) : "In Progress",
+        duration: record.totalDuration ? formatDuration(record.totalDuration) : "N/A",
+        status: record.status,
+        endActivity: record.endActivity || "N/A",
+        tasks: record.dailyTasks ? (record.dailyTasks as string[]).join(', ') : "N/A",
+      });
+    });
+
+    // Apply borders to all cells
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } }
+        };
+        if (rowNumber > 1) {
+          cell.alignment = { vertical: 'middle', wrapText: true };
+        }
+      });
+    });
+
+    // Generate file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `my-attendance-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `my-attendance-${new Date().toISOString().split("T")[0]}.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

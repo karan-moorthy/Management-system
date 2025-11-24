@@ -5,7 +5,7 @@ import { eq, and, desc, or, like, sql, inArray, gte, lte } from "drizzle-orm";
 
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { db } from "@/db";
-import { tasks, projects, users, activityLogs, members } from "@/db/schema";
+import { tasks, projects, users, activityLogs, members, notifications } from "@/db/schema";
 import { getMember } from "@/features/members/utils";
 import { MemberRole } from "@/features/members/types";
 import { ActivityAction, EntityType } from "@/features/activity/types";
@@ -928,6 +928,47 @@ const app = new Hono()
             console.log(`✅ Column move activity logged successfully`);
           } catch (error) {
             console.error('❌ Failed to log column move activity:', error);
+          }
+
+          // Send notification to admins when task is moved to IN_REVIEW
+          if (taskUpdate.status === TaskStatus.IN_REVIEW && existingTask.status !== TaskStatus.IN_REVIEW) {
+            try {
+              console.log(`📧 Sending IN_REVIEW notification to admins for task: ${updatedTask.summary}`);
+              
+              // Get all admin users in the workspace
+              const workspaceId = existingTask.workspaceId;
+              if (workspaceId) {
+                const adminMembers = await db
+                  .select({
+                    userId: members.userId,
+                  })
+                  .from(members)
+                  .where(
+                    and(
+                      eq(members.workspaceId, workspaceId),
+                      eq(members.role, MemberRole.ADMIN)
+                    )
+                  );
+
+                // Send notification to each admin
+                for (const admin of adminMembers) {
+                  await db.insert(notifications).values({
+                    userId: admin.userId,
+                    taskId: updatedTask.id,
+                    type: "TASK_IN_REVIEW",
+                    title: "Task Ready for Review",
+                    message: `${user.name} has moved task "${updatedTask.summary}" (${updatedTask.issueId}) to In Review and is awaiting your approval.`,
+                    actionBy: user.id,
+                    actionByName: user.name,
+                    isRead: "false",
+                  });
+                }
+                
+                console.log(`✅ Notified ${adminMembers.length} admin(s) about task in review`);
+              }
+            } catch (error) {
+              console.error('❌ Failed to send IN_REVIEW notification to admins:', error);
+            }
           }
         }
       }

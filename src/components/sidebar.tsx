@@ -17,7 +17,8 @@ import {
   ChevronRight,
   User,
   UserPen,
-  FileCheck
+  FileCheck,
+  Calendar
 } from "lucide-react";
 import { GoHome, GoHomeFill, GoCheckCircle, GoCheckCircleFill } from "react-icons/go";
 import { usePathname } from "next/navigation";
@@ -196,6 +197,13 @@ export const Sidebar = () => {
           >
             <Clock className="size-4" />
             My Attendance
+          </Link>
+          <Link
+            href="/weekly-report"
+            className="flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground hover:bg-muted"
+          >
+            <Calendar className="size-4" />
+            Weekly Report
           </Link>
         </nav>
       </CollapsibleSection>

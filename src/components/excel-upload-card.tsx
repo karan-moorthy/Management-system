@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, LoaderIcon, Download } from "lucide-react";
+import ExcelJS from 'exceljs';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,76 +93,94 @@ export const ExcelUploadCard = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleDownloadTemplate = () => {
-    // Create Excel file with yellow header row using xlsx library approach
-    // For now, create CSV and note that yellow formatting needs to be done in Excel
-    // To add actual yellow color, you'll need to install xlsx library: npm install xlsx
-    
+  const handleDownloadTemplate = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Task Import Template');
+
+    // Define columns with proper widths
     const headers = [
-      'Summary',
-      'Summary id',
-      'Issue id',
-      'Issue Type',
-      'Status',
-      'Project name',
-      'Priority',
-      'Resolution',
-      'Assignee',
-      'Reporter',
-      'Creator',
-      'Created',
-      'Updated',
-      'Resolved',
-      'Due date',
-      'Labels'
+      { header: 'Summary', width: 25 },
+      { header: 'Summary id', width: 15 },
+      { header: 'Issue id', width: 12 },
+      { header: 'Issue Type', width: 15 },
+      { header: 'Status', width: 15 },
+      { header: 'Project name', width: 20 },
+      { header: 'Priority', width: 12 },
+      { header: 'Resolution', width: 15 },
+      { header: 'Assignee', width: 20 },
+      { header: 'Reporter', width: 20 },
+      { header: 'Creator', width: 20 },
+      { header: 'Created', width: 18 },
+      { header: 'Updated', width: 18 },
+      { header: 'Resolved', width: 18 },
+      { header: 'Due date', width: 18 },
+      { header: 'Labels', width: 20 }
     ];
 
-    const emptyRow1 = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
-    const emptyRow2 = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+    worksheet.columns = headers;
+
+    // Style the header row with yellow background (matching your sample)
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FF000000' }, size: 11 };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFFF00' } // Yellow background
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 20;
+
+    // Apply borders to header
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FF000000' } },
+        bottom: { style: 'thin', color: { argb: 'FF000000' } },
+        right: { style: 'thin', color: { argb: 'FF000000' } }
+      };
+    });
+
+    // Add two empty rows for data entry
+    worksheet.addRow({});
+    worksheet.addRow({});
     
-    const instructionRow = [
-      '(The titles should not be modified under any circumstances.)',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      ''
-    ];
+    // Add instruction row
+    const instructionRow = worksheet.addRow({
+      Summary: '(The titles should not be modified under any circumstances.)'
+    });
+    instructionRow.font = { italic: true, color: { argb: 'FFFF0000' }, size: 10 };
+    instructionRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFD966' } // Light yellow background
+    };
 
-    // Create CSV content with BOM for Excel compatibility
-    const csvContent = '\uFEFF' + [
-      headers.join(','),
-      emptyRow1.join(','),
-      emptyRow2.join(','),
-      instructionRow.join(',')
-    ].join('\n');
+    // Apply borders to all rows
+    [2, 3, 4].forEach(rowNum => {
+      const row = worksheet.getRow(rowNum);
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+          left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+          bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+          right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+        };
+      });
+    });
 
-    // Create and trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', 'task_import_template.csv');
+    link.setAttribute('download', 'task_import_template.xlsx');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    // Note: To add yellow background color to headers, you need to:
-    // 1. Install xlsx library: npm install xlsx
-    // 2. Generate .xlsx file instead of .csv
-    // CSV format doesn't support cell formatting/colors
+    URL.revokeObjectURL(url);
   };
 
   const handleUpload = () => {
