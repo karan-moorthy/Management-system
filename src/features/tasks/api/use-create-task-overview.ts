@@ -9,15 +9,19 @@ export const useCreateTaskOverview = () => {
 
   const mutation = useMutation({
     mutationFn: async (payload: CreateTaskOverviewPayload) => {
+      console.log("📤 Submitting task overview:", payload);
       const response = await client.api["task-overviews"].$post({
         json: payload,
       });
+
+      console.log("Response status:", response.status, response.statusText);
 
       if (!response.ok) {
         // Try to parse JSON error, fallback to text
         let errorMessage = "Failed to submit task overview";
         try {
           const error = await response.json();
+          console.error("❌ Error response:", error);
           errorMessage = error.message || errorMessage;
         } catch {
           const text = await response.text();
@@ -27,7 +31,9 @@ export const useCreateTaskOverview = () => {
         throw new Error(errorMessage);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log("✅ Overview submitted successfully:", result);
+      return result;
     },
     onSuccess: () => {
       toast.success("Task overview submitted successfully! Awaiting admin review.");

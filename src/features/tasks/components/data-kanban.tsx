@@ -142,13 +142,23 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
         return;
       }
 
-      // INTERCEPT: If moving to Done, open overview form instead
-      if (destStatus === TaskStatus.DONE && sourceStatus !== TaskStatus.DONE) {
+      // PREVENT: Don't allow moving approved tasks out of Done status
+      if (sourceStatus === TaskStatus.DONE && destStatus !== TaskStatus.DONE) {
+        alert("Approved tasks cannot be moved out of Done. Please contact an admin if changes are needed.");
+        return;
+      }
+
+      // INTERCEPT: If moving to In Review or Done from any other status, open overview form
+      // After submission, task will move to IN_REVIEW for admin review
+      if ((destStatus === TaskStatus.IN_REVIEW || destStatus === TaskStatus.DONE) && 
+          sourceStatus !== TaskStatus.IN_REVIEW && 
+          sourceStatus !== TaskStatus.DONE) {
         setTaskForOverview(movedTask);
         setOverviewFormOpen(true);
         
-        // Store the intended update to apply after overview submission
-        const tempUpdates = calculateDragUpdates(source, destination, sourceStatus, destStatus, movedTask);
+        // Store the intended update - always move to IN_REVIEW for admin review
+        // This ensures admin gets to review the task first
+        const tempUpdates = calculateDragUpdates(source, destination, sourceStatus, TaskStatus.IN_REVIEW, movedTask);
         setPendingDragUpdate({ updates: tempUpdates });
         return;
       }
@@ -241,11 +251,15 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
 
   // Handle successful overview submission
   const handleOverviewSuccess = useCallback(() => {
+    console.log("✅ Overview form submitted successfully!");
+    console.log("📋 Pending drag update:", pendingDragUpdate);
+    
     if (pendingDragUpdate) {
-      // Apply the pending drag update
+      console.log("🔄 Applying pending drag update to move task to IN_REVIEW");
+      // Apply the pending drag update (task moves to IN_REVIEW)
       onChange(pendingDragUpdate.updates);
       
-      // Update local state to reflect the move
+      // Update local state to reflect the move to IN_REVIEW
       setTasks((prevTasks) => {
         const newTasks = { ...prevTasks };
         
@@ -259,14 +273,17 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
           );
         });
         
-        // Add to Done column
-        const updatedTask = { ...taskForOverview, status: TaskStatus.DONE };
-        newTasks[TaskStatus.DONE] = [...newTasks[TaskStatus.DONE], updatedTask];
+        // Add to IN_REVIEW column (not DONE - admin needs to review first)
+        const updatedTask = { ...taskForOverview, status: TaskStatus.IN_REVIEW };
+        newTasks[TaskStatus.IN_REVIEW] = [...newTasks[TaskStatus.IN_REVIEW], updatedTask];
         
+        console.log("✅ Local state updated - task moved to IN_REVIEW column");
         return newTasks;
       });
       
       setPendingDragUpdate(null);
+    } else {
+      console.warn("⚠️ No pending drag update found!");
     }
     setTaskForOverview(null);
   }, [pendingDragUpdate, taskForOverview, onChange]);

@@ -840,6 +840,11 @@ const app = new Hono()
       const user = c.get("user");
       const { tasks: tasksToUpdate } = c.req.valid("json");
 
+      console.log(`\n🔄 BULK UPDATE REQUEST RECEIVED`);
+      console.log(`👤 User: ${user.name} (${user.id})`);
+      console.log(`📋 Tasks to update: ${tasksToUpdate.length}`);
+      console.log(`📋 Task details:`, JSON.stringify(tasksToUpdate, null, 2));
+
       // Get all tasks and verify authorization
       const taskIds = tasksToUpdate.map((t) => t.id);
       const existingTasks = await db
@@ -933,41 +938,42 @@ const app = new Hono()
           // Send notification to admins when task is moved to IN_REVIEW
           if (taskUpdate.status === TaskStatus.IN_REVIEW && existingTask.status !== TaskStatus.IN_REVIEW) {
             try {
-              console.log(`📧 Sending IN_REVIEW notification to admins for task: ${updatedTask.summary}`);
+              console.log(`📧 Sending IN_REVIEW notification to ALL admins for task: ${updatedTask.summary}`);
+              console.log(`📧 Task status changed from ${existingTask.status} to ${taskUpdate.status}`);
               
-              // Get all admin users in the workspace
-              const workspaceId = existingTask.workspaceId;
-              if (workspaceId) {
-                const adminMembers = await db
-                  .select({
-                    userId: members.userId,
-                  })
-                  .from(members)
-                  .where(
-                    and(
-                      eq(members.workspaceId, workspaceId),
-                      eq(members.role, MemberRole.ADMIN)
-                    )
-                  );
+              // Get ALL admin users across all workspaces
+              const adminMembers = await db
+                .select({
+                  userId: members.userId,
+                  userName: users.name,
+                })
+                .from(members)
+                .innerJoin(users, eq(members.userId, users.id))
+                .where(eq(members.role, MemberRole.ADMIN));
 
-                // Send notification to each admin
-                for (const admin of adminMembers) {
-                  await db.insert(notifications).values({
-                    userId: admin.userId,
-                    taskId: updatedTask.id,
-                    type: "TASK_IN_REVIEW",
-                    title: "Task Ready for Review",
-                    message: `${user.name} has moved task "${updatedTask.summary}" (${updatedTask.issueId}) to In Review and is awaiting your approval.`,
-                    actionBy: user.id,
-                    actionByName: user.name,
-                    isRead: "false",
-                  });
-                }
-                
-                console.log(`✅ Notified ${adminMembers.length} admin(s) about task in review`);
+              console.log(`📧 Found ${adminMembers.length} admin(s) in system:`, adminMembers);
+
+              // Send notification to each admin
+              for (const admin of adminMembers) {
+                console.log(`📧 Creating notification for admin: ${admin.userName} (${admin.userId})`);
+                const newNotification = await db.insert(notifications).values({
+                  userId: admin.userId,
+                  taskId: updatedTask.id,
+                  type: "TASK_IN_REVIEW",
+                  title: "Task Ready for Review",
+                  message: `${user.name} has moved task "${updatedTask.summary}" (${updatedTask.issueId}) to In Review and is awaiting your approval.`,
+                  actionBy: user.id,
+                  actionByName: user.name,
+                  isRead: "false",
+                  createdAt: new Date(), // Explicitly set current UTC timestamp
+                }).returning();
+                console.log(`✅ Notification created:`, newNotification);
               }
+              
+              console.log(`✅ Notified ${adminMembers.length} admin(s) about task in review`);
             } catch (error) {
               console.error('❌ Failed to send IN_REVIEW notification to admins:', error);
+              console.error('❌ Error details:', error);
             }
           }
         }

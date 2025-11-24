@@ -91,6 +91,58 @@ const app = new Hono()
         500
       );
     }
+  })
+
+  // Delete individual notification
+  .delete("/:notificationId", sessionMiddleware, async (c) => {
+    const user = c.get("user");
+    const { notificationId } = c.req.param();
+
+    try {
+      const [deleted] = await db
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.id, notificationId),
+            eq(notifications.userId, user.id)
+          )
+        )
+        .returning();
+
+      if (!deleted) {
+        return c.json(
+          { success: false, message: "Notification not found" },
+          404
+        );
+      }
+
+      return c.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      return c.json(
+        { success: false, message: "Failed to delete notification" },
+        500
+      );
+    }
+  })
+
+  // Clear all notifications (delete)
+  .delete("/clear-all", sessionMiddleware, async (c) => {
+    const user = c.get("user");
+
+    try {
+      await db
+        .delete(notifications)
+        .where(eq(notifications.userId, user.id));
+
+      return c.json({ success: true });
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+      return c.json(
+        { success: false, message: "Failed to clear notifications" },
+        500
+      );
+    }
   });
 
 export default app;

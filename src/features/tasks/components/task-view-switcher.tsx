@@ -59,6 +59,7 @@ export const TaskViewSwitcher = ({
 
   const onKanbanChange = useCallback(
     (tasks: { id: string; status: TaskStatus; position: number }[]) => {
+      console.log("🔄 Kanban change triggered. Updating tasks:", tasks);
       bulkUpdate({ json: { tasks } });
     },
     [bulkUpdate]

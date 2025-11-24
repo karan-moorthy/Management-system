@@ -1,16 +1,19 @@
 import { redirect } from "next/navigation";
 import { getCurrent } from "@/features/auth/queries";
 import { TaskViewSwitcher } from "@/features/tasks/components/task-view-switcher";
+import { TaskOverviewsPanel } from "@/features/tasks/components/task-overviews-panel";
 import { ExcelUploadCard } from "@/components/excel-upload-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileSpreadsheet, ListTodo } from "lucide-react";
+import { FileSpreadsheet, ListTodo, ClipboardCheck } from "lucide-react";
 import { getMember } from "@/features/members/utils";
 import { MemberRole } from "@/features/members/types";
 
-const TasksPage = async () => {
+const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) => {
   const user = await getCurrent();
   if (!user) redirect("/sign-in");
+
+  const defaultTab = searchParams.tab || "individual";
 
   // Check if user is admin in any workspace
   const isAdmin = await (async () => {
@@ -23,17 +26,30 @@ const TasksPage = async () => {
         where: eq(members.userId, user.id),
       });
       
-      if (!memberRole) return false;
+      console.log(`🔍 Checking admin access for user: ${user.name} (${user.id})`);
+      console.log(`📋 Member role found:`, memberRole);
       
-      return [
+      if (!memberRole) {
+        console.log("❌ No member role found - not admin");
+        return false;
+      }
+      
+      const isAdminRole = [
         MemberRole.ADMIN,
         MemberRole.PROJECT_MANAGER,
         MemberRole.MANAGEMENT,
       ].includes(memberRole.role as MemberRole);
-    } catch {
+      
+      console.log(`✅ Is admin: ${isAdminRole} (Role: ${memberRole.role})`);
+      
+      return isAdminRole;
+    } catch (error) {
+      console.error("❌ Error checking admin status:", error);
       return false;
     }
   })();
+
+  console.log(`🎯 Final isAdmin value: ${isAdmin}`);
 
   return (
     <div className="h-full flex flex-col p-6 space-y-6">
@@ -46,17 +62,23 @@ const TasksPage = async () => {
       </div>
 
       {/* Tabs for Individual vs Bulk Import */}
-      <Tabs defaultValue="individual" className="w-full">
-        <TabsList className={`grid w-full max-w-md ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList className={`grid w-full max-w-2xl ${isAdmin ? 'grid-cols-3' : 'grid-cols-1'}`}>
           <TabsTrigger value="individual" className="flex items-center gap-2">
             <ListTodo className="h-4 w-4" />
             Individual Tasks
           </TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="bulk" className="flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Bulk Import
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="bulk" className="flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Bulk Import
+              </TabsTrigger>
+              <TabsTrigger value="overviews" className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                Task Reviews
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -150,6 +172,23 @@ const TasksPage = async () => {
             </CardHeader>
             <CardContent>
               <TaskViewSwitcher />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
+
+        {/* Task Reviews Tab - Admin Only */}
+        {isAdmin && (
+        <TabsContent value="overviews" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Task Completion Reviews</CardTitle>
+              <CardDescription>
+                Review task completion overviews submitted by employees. Approve or request rework with feedback.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TaskOverviewsPanel />
             </CardContent>
           </Card>
         </TabsContent>

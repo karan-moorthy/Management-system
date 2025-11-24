@@ -26,14 +26,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskOverviewReview } from "./task-overview-review";
 import { useGetTaskOverviews } from "../api/use-get-task-overviews";
 import { TaskOverview, OverviewStatus } from "../types";
-import { useIsAdmin } from "@/features/members/api/use-get-current-member";
-import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
+import { useGetCurrentUserRole } from "@/features/members/api/use-get-user-role";
+import { MemberRole } from "@/features/members/types";
 
 export function TaskOverviewsPanel() {
-  const workspaceId = useWorkspaceId();
-  const isAdmin = useIsAdmin(workspaceId);
+  const { data: memberRole } = useGetCurrentUserRole();
   const [selectedOverview, setSelectedOverview] = useState<TaskOverview | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+
+  console.log("🔍 Task Overviews Panel - Member Role:", memberRole);
+  console.log("📋 MemberRole enum values:", MemberRole);
+
+  // Check if user is admin based on their role
+  const isAdmin = memberRole?.role === MemberRole.ADMIN || 
+                  memberRole?.role === MemberRole.PROJECT_MANAGER ||
+                  memberRole?.role === MemberRole.MANAGEMENT;
+
+  console.log("✅ Is Admin:", isAdmin);
 
   // Only fetch if user is admin
   const { data: pendingOverviews = [], isLoading: loadingPending } = useGetTaskOverviews({

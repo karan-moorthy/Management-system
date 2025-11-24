@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle, XCircle, Eye, Github, Link as LinkIcon, Image as ImageIcon, File, Clock } from "lucide-react";
+import { CheckCircle, XCircle, File } from "lucide-react";
 
 import {
   Dialog,
@@ -11,17 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { TaskOverview, OverviewStatus } from "../types";
 import { useReviewTaskOverview } from "../api/use-review-task-overview";
@@ -81,227 +73,89 @@ export function TaskOverviewReview({
     );
   };
 
-  const formatTimeSpent = (minutes?: number) => {
-    if (!minutes) return "Not specified";
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  const handleFileDownload = (fileUrl: string, index: number) => {
+    // If it's a base64 string, convert to downloadable file
+    if (fileUrl.startsWith('data:')) {
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = `output-file-${index + 1}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // If it's a regular URL, open in new tab
+      window.open(fileUrl, '_blank');
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Review Task Completion Overview</DialogTitle>
+          <DialogTitle>Review Task Completion</DialogTitle>
           <DialogDescription>
-            Review the employee's submission and approve or request rework
+            Review and approve or request rework
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Task Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Task Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold">Task Title:</Label>
-                  <p className="text-sm">{overview.taskTitle}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Employee:</Label>
-                  <p className="text-sm">{overview.employeeName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Submitted:</Label>
-                  <p className="text-sm">
-                    {format(new Date(overview.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Time Spent:</Label>
-                  <p className="text-sm flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {formatTimeSpent(overview.timeSpent)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Completed Work Description */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">What was completed?</Label>
-            <Card>
-              <CardContent className="pt-4">
-                <p className="text-sm whitespace-pre-wrap">{overview.completedWorkDescription}</p>
-              </CardContent>
-            </Card>
+        <div className="space-y-4">
+          {/* Basic Info */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="font-semibold">Task:</span> {overview.taskTitle}
+            </div>
+            <div>
+              <span className="font-semibold">Employee:</span> {overview.employeeName}
+            </div>
+            <div className="col-span-2">
+              <span className="font-semibold">Submitted:</span>{" "}
+              {format(new Date(overview.createdAt), "MMM d, yyyy 'at' h:mm a")}
+            </div>
           </div>
 
-          {/* Completion Method */}
+          {/* Work Description */}
           <div className="space-y-2">
-            <Label className="text-base font-semibold">How was it completed?</Label>
-            <Card>
-              <CardContent className="pt-4">
-                <p className="text-sm whitespace-pre-wrap">{overview.completionMethod}</p>
-              </CardContent>
-            </Card>
+            <Label className="font-semibold">Work Completed</Label>
+            <div className="bg-muted p-3 rounded text-sm whitespace-pre-wrap">
+              {overview.completedWorkDescription}
+            </div>
           </div>
 
-          {/* Steps Followed */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">Steps Followed</Label>
-            <Card>
-              <CardContent className="pt-4">
-                <p className="text-sm whitespace-pre-wrap">{overview.stepsFollowed}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Proof of Work */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Proof of Work</Label>
-            
-            {/* Screenshots */}
-            {overview.proofOfWork.screenshots && overview.proofOfWork.screenshots.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Screenshots ({overview.proofOfWork.screenshots.length})
-                </Label>
-                <div className="flex flex-wrap gap-3">
-                  {overview.proofOfWork.screenshots.map((url, index) => (
-                    <a
-                      key={index}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative"
-                    >
-                      <img
-                        src={url}
-                        alt={`Screenshot ${index + 1}`}
-                        className="h-32 w-32 object-cover rounded border hover:ring-2 hover:ring-primary transition"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
-                        <Eye className="h-6 w-6 text-white" />
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Files */}
-            {overview.proofOfWork.files && overview.proofOfWork.files.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-2">
-                  <File className="h-4 w-4" />
-                  Files ({overview.proofOfWork.files.length})
-                </Label>
-                <div className="space-y-1">
-                  {overview.proofOfWork.files.map((url, index) => (
-                    <a
-                      key={index}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block bg-muted p-3 rounded hover:bg-muted/70 transition"
-                    >
-                      <span className="text-sm text-blue-600 hover:underline">
-                        {url.split('/').pop() || `File ${index + 1}`}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Links */}
-            {overview.proofOfWork.links && overview.proofOfWork.links.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" />
-                  Links ({overview.proofOfWork.links.length})
-                </Label>
-                <div className="space-y-1">
-                  {overview.proofOfWork.links.map((link, index) => (
-                    <a
-                      key={index}
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block bg-muted p-3 rounded hover:bg-muted/70 transition"
-                    >
-                      <span className="text-sm text-blue-600 hover:underline truncate block">
-                        {link}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* GitHub Commits */}
-            {overview.proofOfWork.githubCommits && overview.proofOfWork.githubCommits.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-2">
-                  <Github className="h-4 w-4" />
-                  GitHub Commits ({overview.proofOfWork.githubCommits.length})
-                </Label>
-                <div className="space-y-1">
-                  {overview.proofOfWork.githubCommits.map((commit, index) => (
-                    <div
-                      key={index}
-                      className="bg-muted p-3 rounded font-mono text-xs"
-                    >
-                      {commit}
+          {/* Sample Output File (if exists) */}
+          {overview.proofOfWork?.files && overview.proofOfWork.files.length > 0 && (
+            <div className="space-y-2">
+              <Label className="font-semibold flex items-center gap-2">
+                <File className="h-4 w-4" />
+                Sample Output File
+              </Label>
+              <div className="space-y-1">
+                {overview.proofOfWork.files.map((fileUrl, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleFileDownload(fileUrl, index)}
+                    className="w-full text-left block bg-muted p-2 rounded hover:bg-muted/70 transition text-sm text-blue-600 hover:underline"
+                  >
+                    <div className="flex items-center gap-2">
+                      <File className="h-4 w-4" />
+                      <span>Download Output File {index + 1}</span>
                     </div>
-                  ))}
-                </div>
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
-
-          {/* Optional Fields */}
-          {overview.challenges && (
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">Challenges Faced</Label>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm whitespace-pre-wrap">{overview.challenges}</p>
-                </CardContent>
-              </Card>
             </div>
           )}
-
-          {overview.additionalRemarks && (
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">Additional Remarks</Label>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm whitespace-pre-wrap">{overview.additionalRemarks}</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          <Separator />
 
           {/* Admin Remarks */}
           <div className="space-y-2">
-            <Label htmlFor="adminRemarks" className="text-base font-semibold">
-              Admin Remarks {overview.status === OverviewStatus.PENDING && <span className="text-xs text-muted-foreground">(Required for rework)</span>}
+            <Label htmlFor="adminRemarks" className="font-semibold">
+              Admin Feedback {overview.status === OverviewStatus.PENDING && <span className="text-xs text-muted-foreground">(Required for rework)</span>}
             </Label>
             <Textarea
               id="adminRemarks"
               value={adminRemarks}
               onChange={(e) => setAdminRemarks(e.target.value)}
-              placeholder="Provide feedback, suggestions, or reasons for rework..."
-              className="min-h-[100px] resize-y"
+              placeholder="Provide feedback or reasons for rework..."
+              className="min-h-[80px]"
             />
           </div>
 
@@ -326,30 +180,25 @@ export function TaskOverviewReview({
                 className="gap-2"
               >
                 <CheckCircle className="h-4 w-4" />
-                Approve & Complete
+                Approve
               </Button>
             </div>
           )}
 
-          {/* Show status if already reviewed */}
+          {/* Already Reviewed Status */}
           {overview.status !== OverviewStatus.PENDING && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Badge
                 variant={overview.status === OverviewStatus.APPROVED ? "default" : "destructive"}
-                className="text-sm"
               >
                 {overview.status === OverviewStatus.APPROVED ? "Approved" : "Rework Requested"}
               </Badge>
               
               {overview.adminRemarks && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Previous Admin Remarks</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">{overview.adminRemarks}</p>
-                  </CardContent>
-                </Card>
+                <div className="bg-muted p-3 rounded">
+                  <p className="text-sm font-semibold mb-1">Admin Feedback:</p>
+                  <p className="text-sm whitespace-pre-wrap">{overview.adminRemarks}</p>
+                </div>
               )}
 
               {overview.reviewedAt && (

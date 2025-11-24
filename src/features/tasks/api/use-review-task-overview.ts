@@ -29,7 +29,7 @@ export const useReviewTaskOverview = () => {
       toast.success(
         isApproved
           ? "Task approved and moved to Done!"
-          : "Rework requested. Task moved back to In Review."
+          : "Rework requested. Task moved back to In Progress."
       );
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["task-overviews"] });

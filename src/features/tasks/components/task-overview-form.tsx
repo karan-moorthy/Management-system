@@ -51,6 +51,7 @@ export function TaskOverviewForm({
   const { mutate: createOverview, isPending } = useCreateTaskOverview();
   
   const [outputFile, setOutputFile] = useState<string>("");
+  const [fileName, setFileName] = useState<string>("");
 
   const form = useForm<TaskOverviewFormValues>({
     resolver: zodResolver(taskOverviewSchema),
@@ -64,11 +65,16 @@ export function TaskOverviewForm({
     const uploadedFiles = e.target.files;
     if (!uploadedFiles || uploadedFiles.length === 0) return;
 
-    // TODO: Implement actual file upload to cloud storage (S3, Cloudinary, etc.)
-    // For now, we'll create a placeholder URL
     const file = uploadedFiles[0];
-    const fileUrl = URL.createObjectURL(file); // Temporary local URL
-    setOutputFile(fileUrl);
+    
+    // Convert file to base64 for storage
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setOutputFile(base64String);
+      setFileName(file.name);
+    };
+    reader.readAsDataURL(file);
   };
 
   const onSubmit = (values: TaskOverviewFormValues) => {
@@ -86,6 +92,7 @@ export function TaskOverviewForm({
         onSuccess: () => {
           form.reset();
           setOutputFile("");
+          setFileName("");
           onSuccess?.();
           onClose();
         },
@@ -168,13 +175,16 @@ export function TaskOverviewForm({
                 <div className="flex items-center justify-between bg-muted p-3 rounded mt-2">
                   <div className="flex items-center gap-2">
                     <File className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm truncate">{outputFile.split('/').pop() || "Uploaded file"}</span>
+                    <span className="text-sm truncate">{fileName || "Uploaded file"}</span>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setOutputFile("")}
+                    onClick={() => {
+                      setOutputFile("");
+                      setFileName("");
+                    }}
                   >
                     <X className="h-4 w-4" />
                   </Button>

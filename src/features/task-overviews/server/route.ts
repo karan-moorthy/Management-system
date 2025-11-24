@@ -84,11 +84,35 @@ const app = new Hono()
           .limit(1);
 
         if (existingOverview) {
-          console.log("Overview already exists");
+          console.log("Overview already exists with status:", existingOverview.status);
+          
+          // If the overview is still pending, allow updating it
+          if (existingOverview.status === OverviewStatus.PENDING) {
+            console.log("Updating existing pending overview");
+            const [updatedOverview] = await db
+              .update(taskOverviews)
+              .set({
+                completedWorkDescription: data.completedWorkDescription,
+                completionMethod: data.completionMethod,
+                stepsFollowed: data.stepsFollowed,
+                proofOfWork: data.proofOfWork,
+                challenges: data.challenges,
+                additionalRemarks: data.additionalRemarks,
+                timeSpent: data.timeSpent,
+                submittedAt: new Date(),
+              })
+              .where(eq(taskOverviews.id, existingOverview.id))
+              .returning();
+
+            console.log("✅ Overview updated successfully");
+            return c.json({ success: true, data: updatedOverview });
+          }
+          
+          // If already approved or rejected, don't allow resubmission
           return c.json(
             {
               success: false,
-              message: "An overview has already been submitted for this task",
+              message: `This task overview has already been ${existingOverview.status.toLowerCase()}`,
             },
             409
           );
@@ -188,45 +212,49 @@ const app = new Hono()
     const user = c.get("user");
     const status = c.req.query("status");
     const taskId = c.req.query("taskId");
-    const workspaceId = c.req.query("workspaceId");
 
     try {
-      // Check if user is admin or project manager in the workspace
-      let isAdmin = false;
-      if (workspaceId) {
-        const [member] = await db
-          .select()
-          .from(members)
-          .where(
-            and(
-              eq(members.workspaceId, workspaceId),
-              eq(members.userId, user.id)
-            )
-          )
-          .limit(1);
+      console.log("📋 Fetching task overviews - User:", user.id);
+      console.log("   Status filter:", status || "none");
+      console.log("   Task filter:", taskId || "none");
 
-        isAdmin = member && (
-          member.role === MemberRole.ADMIN || 
+      // Check if user has admin role across ANY workspace (workspace-agnostic)
+      const userMemberships = await db
+        .select()
+        .from(members)
+        .where(eq(members.userId, user.id));
+
+      console.log(`   Found ${userMemberships.length} workspace memberships for user`);
+
+      const isAdmin = userMemberships.some(
+        (member) =>
+          member.role === MemberRole.ADMIN ||
           member.role === MemberRole.PROJECT_MANAGER ||
           member.role === MemberRole.MANAGEMENT
-        );
-      }
+      );
+
+      console.log(`   Is Admin (workspace-agnostic): ${isAdmin}`);
 
       let query = db.select().from(taskOverviews);
 
       const conditions = [];
 
       // Employees can only see their own overviews
-      // Admins can see all
+      // Admins can see all overviews regardless of workspace
       if (!isAdmin) {
+        console.log("   Filtering to employee's own overviews");
         conditions.push(eq(taskOverviews.employeeId, user.id));
+      } else {
+        console.log("   Admin access: showing all overviews");
       }
 
       if (status) {
+        console.log(`   Filtering by status: ${status}`);
         conditions.push(eq(taskOverviews.status, status));
       }
 
       if (taskId) {
+        console.log(`   Filtering by taskId: ${taskId}`);
         conditions.push(eq(taskOverviews.taskId, taskId));
       }
 
@@ -236,9 +264,19 @@ const app = new Hono()
 
       const overviews = await query.orderBy(desc(taskOverviews.createdAt));
 
+      console.log(`✅ Retrieved ${overviews.length} task overviews`);
+      if (overviews.length > 0) {
+        console.log("   First overview:", {
+          id: overviews[0].id,
+          taskId: overviews[0].taskId,
+          status: overviews[0].status,
+          employee: overviews[0].employeeName,
+        });
+      }
+
       return c.json({ success: true, data: overviews });
     } catch (error) {
-      console.error("Failed to fetch task overviews:", error);
+      console.error("❌ Failed to fetch task overviews:", error);
       return c.json(
         { success: false, message: "Failed to fetch task overviews" },
         500
@@ -380,6 +418,7 @@ const app = new Hono()
                 actionBy: user.id,
                 actionByName: user.name,
                 isRead: "false",
+                createdAt: new Date(), // Explicitly set current UTC timestamp
               });
             } catch (error) {
               console.error("Failed to send task approval notification:", error);
@@ -387,12 +426,12 @@ const app = new Hono()
           }
         }
 
-        // If rework requested, move task back to IN_REVIEW
+        // If rework requested, move task back to IN_PROGRESS
         if (status === OverviewStatus.REWORK) {
           await db
             .update(tasks)
             .set({
-              status: TaskStatus.IN_REVIEW,
+              status: TaskStatus.IN_PROGRESS,
               updated: new Date(),
             })
             .where(eq(tasks.id, overview.taskId));
@@ -408,11 +447,11 @@ const app = new Hono()
               workspaceId: task.workspaceId,
               projectId: task.projectId,
               taskId: task.id,
-              summary: `${user.name} requested rework on ${task.issueId} - moved to In Review`,
+              summary: `${user.name} requested rework on ${task.issueId} - moved back to In Progress`,
               changes: {
                 field: "status",
                 oldValue: task.status,
-                newValue: TaskStatus.IN_REVIEW,
+                newValue: TaskStatus.IN_PROGRESS,
                 metadata: {
                   overviewId: overview.id,
                   adminRemarks,
@@ -431,12 +470,13 @@ const app = new Hono()
                 taskId: task.id,
                 type: "TASK_REWORK",
                 title: "Rework Requested",
-                message: `Your task "${task.summary}" requires rework. The task has been moved back to In Review.${
+                message: `Your task "${task.summary}" requires rework. The task has been moved back to In Progress.${
                   adminRemarks ? ` Admin remarks: ${adminRemarks}` : ""
                 }`,
                 actionBy: user.id,
                 actionByName: user.name,
                 isRead: "false",
+                createdAt: new Date(), // Explicitly set current UTC timestamp
               });
             } catch (error) {
               console.error("Failed to send rework notification:", error);
