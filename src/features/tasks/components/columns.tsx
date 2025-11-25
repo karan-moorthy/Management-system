@@ -97,14 +97,22 @@ export const columns: ColumnDef<Task>[] = [
     cell: ({ row }) => {
       const project = row.original.project;
 
+      if (!project) {
+        return (
+          <div className="flex items-center gap-x-2 text-sm text-muted-foreground italic">
+            <span>Individual Task</span>
+          </div>
+        );
+      }
+
       return (
         <div className="flex items-center gap-x-2 text-sm font-medium">
           <ProjectAvatar
             className="size-6"
-            name={project?.name || "Unknown"}
-            image={project?.imageUrl || undefined}
+            name={project.name}
+            image={project.imageUrl || undefined}
           />
-          <p className="line-clamp-1">{project?.name || "Unknown"}</p>
+          <p className="line-clamp-1">{project.name}</p>
         </div>
       );
     },

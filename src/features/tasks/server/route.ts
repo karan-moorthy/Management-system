@@ -111,10 +111,27 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      // RBAC: Only ADMIN and PROJECT_MANAGER can delete tasks
+      // RBAC: Permission checks
+      const role = member.role as MemberRole;
       const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
-      if (!allowedRoles.includes(member.role as MemberRole)) {
-        return c.json({ error: "Forbidden: Only admins and project managers can delete tasks" }, 403);
+      
+      // Admins and Project Managers can delete any task
+      if (allowedRoles.includes(role)) {
+        // Allow deletion
+      } 
+      // Employees can ONLY delete their own individual tasks (no project)
+      else if (role === MemberRole.EMPLOYEE) {
+        if (task.projectId !== null || task.assigneeId !== user.id) {
+          return c.json({ 
+            error: "Forbidden: You can only delete your own individual tasks" 
+          }, 403);
+        }
+      } 
+      // Other roles cannot delete tasks
+      else {
+        return c.json({ 
+          error: "Forbidden: Only admins and project managers can delete tasks" 
+        }, 403);
       }
     }
     // For tasks without workspace (CSV uploads), allow deletion by any authenticated user
@@ -213,11 +230,17 @@ const app = new Hono()
       // RBAC: Employees can only see their own tasks (assigned to them)
       if (!isAdmin) {
         conditions.push(eq(tasks.assigneeId, user.id));
-      }
-      
-      // Only filter by workspace if provided (legacy support)
-      if (workspaceId) {
-        conditions.push(eq(tasks.workspaceId, workspaceId));
+        // Employees see both workspace tasks AND individual tasks (workspaceId = null)
+        // Don't filter by workspaceId for employees to include individual tasks
+      } else {
+        // Admins should NOT see individual tasks (projectId is null)
+        // Individual tasks are private to employees
+        conditions.push(sql`${tasks.projectId} IS NOT NULL`);
+        
+        // Only filter by workspace for admins
+        if (workspaceId) {
+          conditions.push(eq(tasks.workspaceId, workspaceId));
+        }
       }
 
       if (projectId) {
@@ -453,16 +476,15 @@ const app = new Hono()
         }
       }
 
-      // Get highest position by projectId instead of workspaceId
+      // Get highest position by projectId (or by user for personal tasks)
+      const positionQuery = projectId 
+        ? and(eq(tasks.projectId, projectId), eq(tasks.status, status))
+        : and(eq(tasks.assigneeId, assigneeId || user.id), eq(tasks.status, status));
+      
       const [highestPositionTask] = await db
         .select()
         .from(tasks)
-        .where(
-          and(
-            eq(tasks.projectId, projectId),
-            eq(tasks.status, status)
-          )
-        )
+        .where(positionQuery)
         .orderBy(desc(tasks.position))
         .limit(1);
 
@@ -473,9 +495,26 @@ const app = new Hono()
       // Generate unique issue ID if not provided or if duplicate
       let finalIssueId = issueId;
       if (!finalIssueId) {
-        // Auto-generate if not provided
-        const timestamp = Date.now();
-        finalIssueId = `TASK-${timestamp}`;
+        // Auto-generate simple unique number with AUTO- prefix
+        // Get the highest existing AUTO-* issue ID to avoid collisions
+        const existingTasks = await db
+          .select({ issueId: tasks.issueId })
+          .from(tasks)
+          .orderBy(desc(tasks.created))
+          .limit(100);
+        
+        // Extract numeric IDs from AUTO-* format and find the highest
+        let maxId = 10000; // Start from 10000 for 5-digit numbers
+        existingTasks.forEach(task => {
+          const numericMatch = task.issueId.match(/^AUTO-(\d+)$/);
+          if (numericMatch) {
+            const num = parseInt(numericMatch[1], 10);
+            if (num > maxId) maxId = num;
+          }
+        });
+        
+        // Generate next ID with AUTO- prefix
+        finalIssueId = `AUTO-${maxId + 1}`;
       } else {
         // Check if issue ID already exists
         const [existingTask] = await db
@@ -498,14 +537,14 @@ const app = new Hono()
           issueId: finalIssueId,
           issueType: issueType || "Task",
           status,
-          projectName,
+          projectName: projectName || null, // No project for individual tasks
           priority: priority || "Medium",
           resolution,
           assigneeId,
           reporterId,
           creatorId: creatorId || user.id,
           description,
-          projectId,
+          projectId: projectId || null, // Allow null for individual tasks
           workspaceId: null,
           dueDate: dueDate ? new Date(dueDate) : null,
           estimatedHours,
@@ -936,7 +975,8 @@ const app = new Hono()
           }
 
           // Send notification to admins when task is moved to IN_REVIEW
-          if (taskUpdate.status === TaskStatus.IN_REVIEW && existingTask.status !== TaskStatus.IN_REVIEW) {
+          // BUT NOT for individual tasks (projectId is null) - those are private to employees
+          if (taskUpdate.status === TaskStatus.IN_REVIEW && existingTask.status !== TaskStatus.IN_REVIEW && existingTask.projectId !== null) {
             try {
               console.log(`📧 Sending IN_REVIEW notification to ALL admins for task: ${updatedTask.summary}`);
               console.log(`📧 Task status changed from ${existingTask.status} to ${taskUpdate.status}`);
@@ -1216,6 +1256,22 @@ const app = new Hono()
         const BATCH_SIZE = 100;
         const taskDataBatch = [];
         
+        // Get the highest existing AUTO-* issue ID to start from
+        const existingTasks = await db
+          .select({ issueId: tasks.issueId })
+          .from(tasks)
+          .orderBy(desc(tasks.created))
+          .limit(100);
+        
+        let maxId = 10000; // Start from 10000 for 5-digit numbers
+        existingTasks.forEach(task => {
+          const numericMatch = task.issueId.match(/^AUTO-(\d+)$/);
+          if (numericMatch) {
+            const num = parseInt(numericMatch[1], 10);
+            if (num > maxId) maxId = num;
+          }
+        });
+        
         for (let i = 0; i < dataRows.length; i++) {
           const row = dataRows[i];
           
@@ -1233,7 +1289,7 @@ const app = new Hono()
           
           const summary = row[0]?.trim() || '';
           const summaryId = row[1]?.trim() || '';
-          const issueId = row[2]?.trim() || `TASK-${Date.now()}-${i}`;
+          const issueId = row[2]?.trim() || `AUTO-${++maxId}`;
           const issueType = row[3]?.trim() || 'Task';
           const status = row[4]?.trim() || TaskStatus.TODO;
           const projectName = row[5]?.trim() || project.name;

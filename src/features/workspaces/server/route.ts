@@ -288,25 +288,27 @@ const app = new Hono()
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
-    // Get this month's tasks count
+    // Get this month's tasks count (excluding individual tasks)
     const [thisMonthTasksResult] = await db
       .select({ count: count() })
       .from(tasks)
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
+          sql`${tasks.projectId} IS NOT NULL`, // Exclude individual tasks
           gte(tasks.created, thisMonthStart),
           lte(tasks.created, thisMonthEnd)
         )
       );
 
-    // Get last month's tasks count
+    // Get last month's tasks count (excluding individual tasks)
     const [lastMonthTasksResult] = await db
       .select({ count: count() })
       .from(tasks)
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
+          sql`${tasks.projectId} IS NOT NULL`, // Exclude individual tasks
           gte(tasks.created, lastMonthStart),
           lte(tasks.created, lastMonthEnd)
         )
@@ -345,26 +347,28 @@ const app = new Hono()
     const assignedTaskDifference =
       assignedTaskCount - lastMonthAssignedTasksResult.count;
 
-    // Get this month's completed tasks count
+    // Get this month's completed tasks count (excluding individual tasks)
     const [thisMonthCompletedTasksResult] = await db
       .select({ count: count() })
       .from(tasks)
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
+          sql`${tasks.projectId} IS NOT NULL`, // Exclude individual tasks
           eq(tasks.status, TaskStatus.DONE),
           gte(tasks.created, thisMonthStart),
           lte(tasks.created, thisMonthEnd)
         )
       );
 
-    // Get last month's completed tasks count
+    // Get last month's completed tasks count (excluding individual tasks)
     const [lastMonthCompletedTasksResult] = await db
       .select({ count: count() })
       .from(tasks)
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
+          sql`${tasks.projectId} IS NOT NULL`, // Exclude individual tasks
           eq(tasks.status, TaskStatus.DONE),
           gte(tasks.created, lastMonthStart),
           lte(tasks.created, lastMonthEnd)
@@ -375,26 +379,28 @@ const app = new Hono()
     const completedTaskDifference =
       completedTaskCount - lastMonthCompletedTasksResult.count;
 
-    // Get this month's overdue tasks count
+    // Get this month's overdue tasks count (excluding individual tasks)
     const [thisMonthOverdueTasksResult] = await db
       .select({ count: count() })
       .from(tasks)
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
+          sql`${tasks.projectId} IS NOT NULL`, // Exclude individual tasks
           lte(tasks.dueDate, now),
           gte(tasks.created, thisMonthStart),
           lte(tasks.created, thisMonthEnd)
         )
       );
 
-    // Get last month's overdue tasks count
+    // Get last month's overdue tasks count (excluding individual tasks)
     const [lastMonthOverdueTasksResult] = await db
       .select({ count: count() })
       .from(tasks)
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
+          sql`${tasks.projectId} IS NOT NULL`, // Exclude individual tasks
           lte(tasks.dueDate, lastMonthEnd),
           gte(tasks.created, lastMonthStart),
           lte(tasks.created, lastMonthEnd)

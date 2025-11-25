@@ -12,12 +12,13 @@ import { ChevronDown } from "lucide-react";
 import { KanbanCard } from "./kanban-card";
 import { KanbanColumnHeader } from "./kanban-column-header";
 import { TaskOverviewForm } from "./task-overview-form";
+import { usePermissionContext } from "@/components/providers/permission-provider";
+import { MemberRole } from "@/features/members/types";
 
 import { Task, TaskStatus } from "../types";
 import "./kanban-optimizations.css";
 
 const boards: TaskStatus[] = [
-  TaskStatus.BACKLOG,
   TaskStatus.TODO,
   TaskStatus.IN_PROGRESS,
   TaskStatus.IN_REVIEW,
@@ -44,6 +45,9 @@ interface DataKanbanProps {
 }
 
 export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
+  const { role } = usePermissionContext();
+  const isAdmin = role === MemberRole.ADMIN || role === MemberRole.PROJECT_MANAGER;
+  
   // Overview form state
   const [overviewFormOpen, setOverviewFormOpen] = useState(false);
   const [taskForOverview, setTaskForOverview] = useState<Task | null>(null);
@@ -142,15 +146,57 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
         return;
       }
 
-      // PREVENT: Don't allow moving approved tasks out of Done status
-      if (sourceStatus === TaskStatus.DONE && destStatus !== TaskStatus.DONE) {
+      // Check if this is an individual task (no project)
+      const isIndividualTask = !movedTask.projectId;
+      console.log('🔍 Task move debug:', {
+        taskId: movedTask.id,
+        summary: movedTask.summary,
+        projectId: movedTask.projectId,
+        isIndividualTask,
+        isAdmin,
+        sourceStatus,
+        destStatus
+      });
+
+      // PREVENT: Don't allow non-admins to move approved tasks out of Done status
+      // EXCEPTION: Individual tasks can be moved freely by their owner
+      if (!isAdmin && !isIndividualTask && sourceStatus === TaskStatus.DONE && destStatus !== TaskStatus.DONE) {
         alert("Approved tasks cannot be moved out of Done. Please contact an admin if changes are needed.");
         return;
       }
 
+      // ENFORCE SEQUENTIAL WORKFLOW: TODO -> IN_PROGRESS -> IN_REVIEW -> DONE
+      // Admins can move tasks anywhere
+      // EXCEPTION: Employees can move their own individual tasks anywhere
+      if (!isAdmin && !isIndividualTask) {
+        const statusOrder = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW, TaskStatus.DONE];
+        const sourceIndex = statusOrder.indexOf(sourceStatus);
+        const destIndex = statusOrder.indexOf(destStatus);
+        
+        // Allow moving within same column or to adjacent columns only
+        if (sourceStatus !== destStatus) {
+          const diff = Math.abs(destIndex - sourceIndex);
+          if (diff > 1) {
+            const nextStatus = sourceIndex < destIndex 
+              ? statusOrder[sourceIndex + 1] 
+              : statusOrder[sourceIndex - 1];
+            const statusNames = {
+              [TaskStatus.TODO]: "To Do",
+              [TaskStatus.IN_PROGRESS]: "In Progress",
+              [TaskStatus.IN_REVIEW]: "In Review",
+              [TaskStatus.DONE]: "Done"
+            };
+            alert(`Tasks must move step-by-step. Please move to "${statusNames[nextStatus]}" first.`);
+            return;
+          }
+        }
+      }
+
       // INTERCEPT: If moving to In Review or Done from any other status, open overview form
       // After submission, task will move to IN_REVIEW for admin review
-      if ((destStatus === TaskStatus.IN_REVIEW || destStatus === TaskStatus.DONE) && 
+      // Admins can skip this and move tasks directly
+      // EXCEPTION: Individual tasks don't need overview form
+      if (!isAdmin && !isIndividualTask && (destStatus === TaskStatus.IN_REVIEW || destStatus === TaskStatus.DONE) && 
           sourceStatus !== TaskStatus.IN_REVIEW && 
           sourceStatus !== TaskStatus.DONE) {
         setTaskForOverview(movedTask);

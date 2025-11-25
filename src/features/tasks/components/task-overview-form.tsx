@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTaskOverview } from "@/features/tasks/api/use-create-task-overview";
 import { Task } from "../types";
+import { usePermissionContext } from "@/components/providers/permission-provider";
+import { MemberRole } from "@/features/members/types";
 
 const taskOverviewSchema = z.object({
   description: z.string().min(10, "Please provide a description (minimum 10 characters)"),
@@ -49,9 +51,19 @@ export function TaskOverviewForm({
   onSuccess,
 }: TaskOverviewFormProps) {
   const { mutate: createOverview, isPending } = useCreateTaskOverview();
+  const { role } = usePermissionContext();
   
   const [outputFile, setOutputFile] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+
+  // Only employees can submit task completion overviews
+  const canSubmitOverview = role === MemberRole.EMPLOYEE;
+
+  // If admin tries to open this, close immediately
+  if (isOpen && !canSubmitOverview) {
+    onClose();
+    return null;
+  }
 
   const form = useForm<TaskOverviewFormValues>({
     resolver: zodResolver(taskOverviewSchema),

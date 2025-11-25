@@ -34,19 +34,24 @@ export const useGetTasks = ({
     queryFn: async () => {
       const startTime = performance.now();
       
+      // Build query object, only including defined values
+      const queryParams: Record<string, string> = {
+        limit: limit?.toString() ?? "2000",
+        offset: offset?.toString() ?? "0",
+      };
+      
+      // Only add parameters if they have actual values
+      if (workspaceId) queryParams.workspaceId = workspaceId;
+      if (projectId) queryParams.projectId = projectId;
+      if (status) queryParams.status = status;
+      if (assigneeId) queryParams.assigneeId = assigneeId;
+      if (dueDate) queryParams.dueDate = dueDate;
+      if (search) queryParams.search = search;
+      if (month) queryParams.month = month;
+      if (week) queryParams.week = week;
+      
       const response = await client.api.tasks.$get({
-        query: {
-          workspaceId: workspaceId ?? undefined,
-          projectId: projectId ?? undefined,
-          status: status ?? undefined,
-          assigneeId: assigneeId ?? undefined,
-          dueDate: dueDate ?? undefined,
-          search: search ?? undefined,
-          month: month ?? undefined,
-          week: week ?? undefined,
-          limit: limit?.toString(),
-          offset: offset?.toString(),
-        },
+        query: queryParams as any,
       });
 
       if (!response.ok) {
@@ -67,10 +72,10 @@ export const useGetTasks = ({
 
       return data;
     },
-    staleTime: 5 * 60 * 1000,      // 5 minutes - cache longer for better performance
-    gcTime: 10 * 60 * 1000,        // 10 minutes - keep in cache longer
-    refetchOnWindowFocus: false,    // Don't refetch on focus (saves API calls)
-    refetchOnMount: false,          // Don't refetch if data is fresh
+    staleTime: 30 * 1000,          // 30 seconds - shorter for fresher data
+    gcTime: 5 * 60 * 1000,         // 5 minutes - keep in cache
+    refetchOnWindowFocus: false,    // Don't refetch on focus
+    refetchOnMount: true,           // Refetch on mount if stale
     retry: 2,                       // Retry failed requests twice
     retryDelay: 1000,              // Wait 1 second between retries
   });

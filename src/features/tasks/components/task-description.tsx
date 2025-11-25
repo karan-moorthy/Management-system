@@ -4,6 +4,8 @@ import { PencilIcon, XIcon } from "lucide-react";
 import { DottedSeparator } from "@/components/dotted-separator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ConditionalGuard } from "@/components/permission-guard";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 
 import { useUpdateTask } from "../api/use-update-task";
 import { Task } from "../types";
@@ -15,8 +17,12 @@ interface TaskDescriptionProps {
 export const TaskDescription = ({ task }: TaskDescriptionProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(task.description);
+  const permissions = usePermissionContext();
 
   const { mutate, isPending } = useUpdateTask();
+
+  // Check if user can edit this task
+  const canEdit = permissions.canEditTask(task.assigneeId);
 
   const handleSave = () => {
     mutate(
@@ -33,18 +39,23 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
     <div className="p-4 border rounded-lg">
       <div className="flex items-center justify-between">
         <p className="text-lg font-semibold">Overview</p>
-        <Button
-          onClick={() => setIsEditing((prev) => !prev)}
-          size="sm"
-          variant="secondary"
+        <ConditionalGuard
+          condition={canEdit}
+          fallback={null}
         >
-          {isEditing ? (
-            <XIcon className="size-4 mr-2" />
-          ) : (
-            <PencilIcon className="size-4 mr-2" />
-          )}
-          {isEditing ? "Cancel" : "Edit"}
-        </Button>
+          <Button
+            onClick={() => setIsEditing((prev) => !prev)}
+            size="sm"
+            variant="secondary"
+          >
+            {isEditing ? (
+              <XIcon className="size-4 mr-2" />
+            ) : (
+              <PencilIcon className="size-4 mr-2" />
+            )}
+            {isEditing ? "Cancel" : "Edit"}
+          </Button>
+        </ConditionalGuard>
       </div>
       <DottedSeparator className="my-4" />
       {isEditing ? (

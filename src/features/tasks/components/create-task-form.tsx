@@ -7,6 +7,9 @@ import { useForm } from "react-hook-form";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { MemberAvatar } from "@/features/members/components/member-avatar";
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
+import { usePermissionContext } from "@/components/providers/permission-provider";
+import { MemberRole } from "@/features/members/types";
+import { useCurrent } from "@/features/auth/api/use-current";
 
 import { cn } from "@/lib/utils";
 import { DatePicker } from "@/components/date-picker";
@@ -48,17 +51,32 @@ export const CreateTaskForm = ({
 }: CreateTaskFormProps) => {
   const workspaceId = useWorkspaceId();
   const { mutate, isPending } = useCreateTask();
+  const { role } = usePermissionContext();
+  const { data: currentUser } = useCurrent();
+  
+  const isEmployee = role === MemberRole.EMPLOYEE;
+  const isAdmin = role === MemberRole.ADMIN || role === MemberRole.PROJECT_MANAGER;
 
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema.omit({ workspaceId: true })),
     defaultValues: {
       workspaceId,
+      assigneeId: isEmployee ? currentUser?.id : undefined,
+      projectName: undefined,
+      projectId: undefined,
     },
   });
 
   const onSubmit = (values: z.infer<typeof createTaskSchema>) => {
+    const payload = { 
+      ...values, 
+      workspaceId: isEmployee ? undefined : workspaceId, // Individual tasks have no workspace
+      assigneeId: isEmployee ? currentUser?.id : values.assigneeId,
+      projectName: isEmployee ? undefined : values.projectName,
+      projectId: isEmployee ? undefined : values.projectId,
+    };
     mutate(
-      { json: { ...values, workspaceId } },
+      { json: payload },
       {
         onSuccess: () => {
           form.reset();
@@ -99,27 +117,29 @@ export const CreateTaskForm = ({
                   name="issueId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Issue ID</FormLabel>
+                      <FormLabel>Issue ID (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., VECV-001" {...field} />
+                        <Input placeholder="Auto-generated if empty" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="projectName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., VECV-SPINE" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {isAdmin && (
+                  <FormField
+                    control={form.control}
+                    name="projectName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., VECV-SPINE" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
               <FormField
                 control={form.control}
@@ -138,28 +158,6 @@ export const CreateTaskForm = ({
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="estimatedHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Hours</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          min="0"
-                          step="0.5"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
               <FormField
                 control={form.control}
                 name="dueDate"
@@ -173,39 +171,46 @@ export const CreateTaskForm = ({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="assigneeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assignee</FormLabel>
-                    <Select
-                      defaultValue={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assignee" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <FormMessage />
-                      <SelectContent>
-                        {memberOptions.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            <div className="flex items-center gap-x-2">
-                              <MemberAvatar
-                                className="size-6"
-                                name={member.name}
-                              />
-                              {member.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+              {isAdmin && (
+                <FormField
+                  control={form.control}
+                  name="assigneeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assignee</FormLabel>
+                      <Select
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select assignee" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <FormMessage />
+                        <SelectContent>
+                          {memberOptions.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              <div className="flex items-center gap-x-2">
+                                <MemberAvatar
+                                  className="size-6"
+                                  name={member.name}
+                                />
+                                {member.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              )}
+              {isEmployee && (
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-semibold">Assignee:</span> {currentUser?.name} (You)
+                </div>
+              )}
               <FormField
                 control={form.control}
                 name="status"
@@ -223,16 +228,13 @@ export const CreateTaskForm = ({
                       </FormControl>
                       <FormMessage />
                       <SelectContent>
-                        <SelectItem value={TaskStatus.BACKLOG}>
-                          Backlog
-                        </SelectItem>
+                        <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
                         <SelectItem value={TaskStatus.IN_PROGRESS}>
                           In Progress
                         </SelectItem>
                         <SelectItem value={TaskStatus.IN_REVIEW}>
                           In Review
                         </SelectItem>
-                        <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
                         <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
                       </SelectContent>
                     </Select>
@@ -286,81 +288,85 @@ export const CreateTaskForm = ({
                     </FormItem>
                   )}
                 />
+                {isAdmin && (
+                  <FormField
+                    control={form.control}
+                    name="issueType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Issue Type</FormLabel>
+                        <Select
+                          defaultValue={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select issue type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <FormMessage />
+                          <SelectContent>
+                            <SelectItem value={IssueType.TASK}>
+                              Task
+                            </SelectItem>
+                            <SelectItem value={IssueType.BUG}>
+                              Bug
+                            </SelectItem>
+                            <SelectItem value={IssueType.EPIC}>
+                              Epic
+                            </SelectItem>
+                            <SelectItem value={IssueType.STORY}>
+                              Story
+                            </SelectItem>
+                            <SelectItem value={IssueType.SUB_TASK}>
+                              Sub-task
+                            </SelectItem>
+                            <SelectItem value={IssueType.IMPROVEMENT}>
+                              Improvement
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+              {isAdmin && (
                 <FormField
                   control={form.control}
-                  name="issueType"
+                  name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Issue Type</FormLabel>
+                      <FormLabel>Project</FormLabel>
                       <Select
                         defaultValue={field.value}
                         onValueChange={field.onChange}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select issue type" />
+                            <SelectValue placeholder="Select project" />
                           </SelectTrigger>
                         </FormControl>
                         <FormMessage />
                         <SelectContent>
-                          <SelectItem value={IssueType.TASK}>
-                            Task
-                          </SelectItem>
-                          <SelectItem value={IssueType.BUG}>
-                            Bug
-                          </SelectItem>
-                          <SelectItem value={IssueType.EPIC}>
-                            Epic
-                          </SelectItem>
-                          <SelectItem value={IssueType.STORY}>
-                            Story
-                          </SelectItem>
-                          <SelectItem value={IssueType.SUB_TASK}>
-                            Sub-task
-                          </SelectItem>
-                          <SelectItem value={IssueType.IMPROVEMENT}>
-                            Improvement
-                          </SelectItem>
+                          {projectOptions.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              <div className="flex items-center gap-x-2">
+                                <ProjectAvatar
+                                  className="size-6"
+                                  name={project.name}
+                                  image={project.imageUrl}
+                                />
+                                {project.name}
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </FormItem>
                   )}
                 />
-              </div>
-              <FormField
-                control={form.control}
-                name="projectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project</FormLabel>
-                    <Select
-                      defaultValue={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <FormMessage />
-                      <SelectContent>
-                        {projectOptions.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            <div className="flex items-center gap-x-2">
-                              <ProjectAvatar
-                                className="size-6"
-                                name={project.name}
-                                image={project.imageUrl}
-                              />
-                              {project.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+              )}
             </div>
             <DottedSeparator className="py-7" />
             <div className="flex items-center justify-between">

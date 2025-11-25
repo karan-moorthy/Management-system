@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
-import { PermissionProvider } from "@/components/providers/permission-provider";
+import { PermissionWrapper } from "@/components/providers/permission-wrapper";
 
 import "./globals.css";
 
@@ -38,12 +38,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <PermissionProvider>
-            <QueryProvider>
+          <QueryProvider>
+            <PermissionWrapper>
               <Toaster />
               {children}
-            </QueryProvider>
-          </PermissionProvider>
+            </PermissionWrapper>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

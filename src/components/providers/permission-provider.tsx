@@ -16,7 +16,7 @@ interface PermissionContextType {
   canDeleteProject: boolean;
   canCreateTask: (projectId?: string) => boolean;
   canEditTask: (taskOwnerId?: string) => boolean;
-  canDeleteTask: boolean;
+  canDeleteTask: (taskOwnerId?: string, taskProjectId?: string | null) => boolean;
   canAssignTask: boolean;
   canChangeStatus: (taskOwnerId?: string) => boolean;
   canManageUsers: boolean;
@@ -88,9 +88,13 @@ export function PermissionProvider({
   };
 
   const canEditTask = (taskOwnerId?: string): boolean => {
-    if (role === MemberRole.MANAGEMENT) return false;
+    // Employees can edit their own tasks (personal tasks)
     if (role === MemberRole.EMPLOYEE) {
       return taskOwnerId === userId;
+    }
+    // Management has read-only access
+    if (role === MemberRole.MANAGEMENT) {
+      return false;
     }
     if (role === MemberRole.TEAM_LEAD) {
       return taskOwnerId ? teamMemberIds.includes(taskOwnerId) : false;
@@ -99,11 +103,27 @@ export function PermissionProvider({
   };
 
   const canChangeStatus = (taskOwnerId?: string): boolean => {
-    // Employee cannot change status - needs approval
-    if (role === MemberRole.EMPLOYEE || role === MemberRole.MANAGEMENT) {
+    // Employees can change status on their own tasks
+    if (role === MemberRole.EMPLOYEE) {
+      return taskOwnerId === userId;
+    }
+    // Management has read-only access
+    if (role === MemberRole.MANAGEMENT) {
       return false;
     }
     return [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER, MemberRole.TEAM_LEAD].includes(role);
+  };
+
+  const canDeleteTask = (taskOwnerId?: string, taskProjectId?: string | null): boolean => {
+    // Admins can delete all tasks
+    if (role === MemberRole.ADMIN || role === MemberRole.PROJECT_MANAGER) {
+      return true;
+    }
+    // Employees can ONLY delete their own individual tasks (no project)
+    if (role === MemberRole.EMPLOYEE) {
+      return taskOwnerId === userId && taskProjectId === null;
+    }
+    return false;
   };
 
   const value: PermissionContextType = {
@@ -115,7 +135,7 @@ export function PermissionProvider({
     canDeleteProject: hasPermission("DELETE_PROJECT"),
     canCreateTask,
     canEditTask,
-    canDeleteTask: hasPermission("DELETE_TASK"),
+    canDeleteTask,
     canAssignTask: hasPermission("ASSIGN_TASK"),
     canChangeStatus,
     canManageUsers: hasPermission("MANAGE_USERS"),

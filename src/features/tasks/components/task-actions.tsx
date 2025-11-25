@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/hooks/use-confirm";
 import { ConditionalGuard } from "@/components/permission-guard";
 import { usePermissionContext } from "@/components/providers/permission-provider";
+import { MemberRole } from "@/features/members/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +19,7 @@ import { useEditTaskModal } from "../hooks/use-edit-task-modal";
 
 interface TaskActionsProps {
   id: string;
-  projectId: string;
+  projectId: string | null;
   assigneeId?: string;
   children: React.ReactNode;
 }
@@ -39,7 +40,7 @@ export const TaskActions = ({ id, projectId, assigneeId, children }: TaskActions
 
   // Check permissions
   const canEdit = permissions.canEditTask(assigneeId);
-  const canDelete = permissions.canDeleteTask;
+  const canDelete = permissions.canDeleteTask(assigneeId, projectId);
 
   const onDelete = async () => {
     const ok = await confirm();
@@ -68,13 +69,6 @@ export const TaskActions = ({ id, projectId, assigneeId, children }: TaskActions
           >
             <ExternalLink className="size-4 mr-2 stroke-2" />
             Task Details
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={onOpenProject}
-            className="font-medium p-[10px]"
-          >
-            <ExternalLink className="size-4 mr-2 stroke-2" />
-            Open Project
           </DropdownMenuItem>
           {canEdit && (
             <DropdownMenuItem

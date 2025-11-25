@@ -27,10 +27,20 @@ export const useDeleteTask = () => {
     },
     onSuccess: ({ data }) => {
       toast.success("Task deleted.");
+      
+      // Remove the specific task from cache immediately
+      queryClient.removeQueries({ queryKey: ["task", data.id] });
+      
+      // Invalidate and force refetch all task-related queries
       queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
       queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["task", data.id] });
+      
+      // Force immediate refetch - this ensures UI updates right away
+      queryClient.refetchQueries({ 
+        queryKey: ["tasks"],
+        type: "active" 
+      });
     },
     onError: () => {
       toast.error("Failed to delete task.");

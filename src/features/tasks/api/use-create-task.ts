@@ -23,9 +23,17 @@ export const useCreateTask = () => {
     },
     onSuccess: () => {
       toast.success("Task created.");
+      
+      // Invalidate analytics
       queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
       queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+      
+      // Invalidate and force immediate refetch of task queries
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.refetchQueries({ 
+        queryKey: ["tasks"],
+        type: "active" 
+      });
     },
     onError: () => {
       toast.error("Failed to create task.");

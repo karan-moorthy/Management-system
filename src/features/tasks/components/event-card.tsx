@@ -58,8 +58,12 @@ export const EventCard = ({
         <p>{title}</p>
         <div className="flex items-center gap-x-1">
           <MemberAvatar name={assignee?.name || "Unknown"} />
-          <div className="size-1 rounded-full bg-muted-foreground/50" />
-          <ProjectAvatar name={project?.name || "Unknown"} image={project?.imageUrl || undefined} />
+          {project && (
+            <>
+              <div className="size-1 rounded-full bg-muted-foreground/50" />
+              <ProjectAvatar name={project.name} image={project.imageUrl || undefined} />
+            </>
+          )}
         </div>
       </div>
     </div>

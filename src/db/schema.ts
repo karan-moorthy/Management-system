@@ -108,7 +108,7 @@ export const tasks = pgTable('tasks', {
   issueId: text('issue_id').notNull().unique(), // e.g., VECV-601
   issueType: text('issue_type').notNull().default('Task'), // Task, Bug, Epic, Story, etc.
   status: text('status').notNull().default('To Do'), // To Do, In Progress, Done, etc.
-  projectName: text('project_name').notNull(), // e.g., VECV-SPINE
+  projectName: text('project_name'), // e.g., VECV-SPINE - null for individual tasks
   priority: text('priority').default('Medium'), // High, Medium, Low
   resolution: text('resolution'), // Done, Won't Fix, Duplicate, etc.
   assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),

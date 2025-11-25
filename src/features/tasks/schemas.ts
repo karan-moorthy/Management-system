@@ -4,14 +4,14 @@ import { TaskStatus, TaskPriority, IssueType, Resolution } from "./types";
 
 export const createTaskSchema = z.object({
   summary: z.string().trim().min(1, "Required"),
-  issueId: z.string().trim().min(1, "Required"),
+  issueId: z.string().trim().optional(),
   issueType: z.nativeEnum(IssueType).optional(),
   status: z.nativeEnum(TaskStatus, { required_error: "Required" }),
-  projectName: z.string().trim().min(1, "Required"),
+  projectName: z.string().trim().optional(),
   workspaceId: z.string().optional(),
-  projectId: z.string().trim().min(1, "Required"),
+  projectId: z.string().trim().optional(),
   dueDate: z.coerce.date().optional(),
-  assigneeId: z.string().trim().min(1, "Required"),
+  assigneeId: z.string().trim().optional(),
   reporterId: z.string().optional(),
   creatorId: z.string().optional(),
   description: z.string().optional(),
@@ -27,7 +27,7 @@ export const bulkCreateTasksSchema = z.object({
   projectId: z.string().trim().min(1, "Required"),
   tasks: z.array(z.object({
     summary: z.string().trim().min(1, "Required"),
-    issueId: z.string().trim().min(1, "Required"),
+    issueId: z.string().trim().optional(),
     description: z.string().optional(),
     status: z.nativeEnum(TaskStatus),
     priority: z.nativeEnum(TaskPriority),
