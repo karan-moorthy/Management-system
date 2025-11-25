@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { TaskStatus, TaskPriority, TaskImportance, type ExcelTaskData } from '../types';
+import { TaskStatus, TaskPriority, IssueType, type ExcelTaskData } from '../types';
 
 export function parseExcelFile(buffer: Buffer): ExcelTaskData[] {
   try {
@@ -47,20 +47,20 @@ function mapColumnsToProperties(headers: string[]): Record<string, number> {
     const normalizedHeader = header.toLowerCase().trim();
     
     // Map common column names
-    if (normalizedHeader.includes('task') || normalizedHeader.includes('name') || normalizedHeader.includes('title')) {
-      columnMap.name = index;
+    if (normalizedHeader.includes('summary') || normalizedHeader.includes('task') || normalizedHeader.includes('name') || normalizedHeader.includes('title')) {
+      columnMap.summary = index;
     } else if (normalizedHeader.includes('description') || normalizedHeader.includes('detail')) {
       columnMap.description = index;
     } else if (normalizedHeader.includes('status') || normalizedHeader.includes('state')) {
       columnMap.status = index;
     } else if (normalizedHeader.includes('priority')) {
       columnMap.priority = index;
-    } else if (normalizedHeader.includes('importance') || normalizedHeader.includes('urgency')) {
-      columnMap.importance = index;
+    } else if (normalizedHeader.includes('issue') && normalizedHeader.includes('type')) {
+      columnMap.issueType = index;
+    } else if (normalizedHeader.includes('project')) {
+      columnMap.projectName = index;
     } else if (normalizedHeader.includes('due') || normalizedHeader.includes('date') || normalizedHeader.includes('deadline')) {
       columnMap.dueDate = index;
-    } else if (normalizedHeader.includes('category') || normalizedHeader.includes('type')) {
-      columnMap.category = index;
     } else if (normalizedHeader.includes('estimated') || normalizedHeader.includes('estimate')) {
       columnMap.estimatedHours = index;
     } else if (normalizedHeader.includes('assignee') || normalizedHeader.includes('assigned') || normalizedHeader.includes('email')) {
@@ -80,9 +80,14 @@ function parseRowToTask(row: any[], columnMap: Record<string, number>, rowNumber
   };
   
   // Required fields
-  const name = getValue('name');
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    throw new Error(`Task name is required (row ${rowNumber})`);
+  const summary = getValue('summary');
+  if (!summary || typeof summary !== 'string' || summary.trim().length === 0) {
+    throw new Error(`Task summary is required (row ${rowNumber})`);
+  }
+  
+  const projectName = getValue('projectName');
+  if (!projectName || typeof projectName !== 'string' || projectName.trim().length === 0) {
+    throw new Error(`Project name is required (row ${rowNumber})`);
   }
   
   // Parse status
@@ -93,9 +98,9 @@ function parseRowToTask(row: any[], columnMap: Record<string, number>, rowNumber
   const priorityValue = getValue('priority') || 'MEDIUM';
   const priority = parseEnumValue(priorityValue, TaskPriority, 'MEDIUM') as TaskPriority;
   
-  // Parse importance
-  const importanceValue = getValue('importance') || 'MEDIUM';
-  const importance = parseEnumValue(importanceValue, TaskImportance, 'MEDIUM') as TaskImportance;
+  // Parse issue type
+  const issueTypeValue = getValue('issueType') || 'TASK';
+  const issueType = parseEnumValue(issueTypeValue, IssueType, 'TASK') as IssueType;
   
   // Parse due date
   const dueDateValue = getValue('dueDate');
@@ -124,32 +129,31 @@ function parseRowToTask(row: any[], columnMap: Record<string, number>, rowNumber
   
   // Parse optional fields
   const description = getValue('description') || undefined;
-  const category = getValue('category') || undefined;
   const estimatedHours = parseNumber(getValue('estimatedHours'));
   const assigneeEmail = getValue('assigneeEmail') || undefined;
   
-  // Parse tags
-  const tagsValue = getValue('tags');
-  let tags: string[] | undefined;
-  if (tagsValue) {
-    if (typeof tagsValue === 'string') {
-      tags = tagsValue.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    } else if (Array.isArray(tagsValue)) {
-      tags = tagsValue.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
+  // Parse labels (tags)
+  const labelsValue = getValue('tags') || getValue('labels');
+  let labels: string[] | undefined;
+  if (labelsValue) {
+    if (typeof labelsValue === 'string') {
+      labels = labelsValue.split(',').map(label => label.trim()).filter(label => label.length > 0);
+    } else if (Array.isArray(labelsValue)) {
+      labels = labelsValue.map(label => String(label).trim()).filter(label => label.length > 0);
     }
   }
   
   return {
-    name: name.trim(),
+    summary: summary.trim(),
+    projectName: projectName.trim(),
     description,
     status,
     priority,
-    importance,
+    issueType,
     dueDate,
-    category,
     estimatedHours,
     assigneeEmail,
-    tags: tags && tags.length > 0 ? tags : undefined,
+    labels: labels && labels.length > 0 ? labels : undefined,
   };
 }
 

@@ -229,12 +229,14 @@ const app = new Hono()
       
       // RBAC: Employees can only see their own tasks (assigned to them)
       if (!isAdmin) {
+        console.log(`👤 Employee query for user: ${user.id}`);
         conditions.push(eq(tasks.assigneeId, user.id));
         // Employees see both workspace tasks AND individual tasks (workspaceId = null)
         // Don't filter by workspaceId for employees to include individual tasks
       } else {
         // Admins should NOT see individual tasks (projectId is null)
         // Individual tasks are private to employees
+        console.log(`👨‍💼 Admin query - excluding individual tasks`);
         conditions.push(sql`${tasks.projectId} IS NOT NULL`);
         
         // Only filter by workspace for admins
@@ -426,6 +428,11 @@ const app = new Hono()
         } : undefined,
       }));
 
+      console.log(`📊 Query returned ${populatedTasks.length} tasks for ${isAdmin ? 'admin' : 'employee'}`);
+      if (populatedTasks.length > 0) {
+        console.log(`📋 Sample task: ID=${populatedTasks[0].id}, Summary=${populatedTasks[0].summary}, ProjectId=${populatedTasks[0].projectId}, WorkspaceId=${populatedTasks[0].workspaceId}`);
+      }
+
       return c.json({
         data: {
           documents: populatedTasks,
@@ -540,12 +547,12 @@ const app = new Hono()
           projectName: projectName || null, // No project for individual tasks
           priority: priority || "Medium",
           resolution,
-          assigneeId,
+          assigneeId: assigneeId || user.id, // Default to current user if not specified
           reporterId,
           creatorId: creatorId || user.id,
           description,
           projectId: projectId || null, // Allow null for individual tasks
-          workspaceId: null,
+          workspaceId: workspaceId || null, // Null for individual employee tasks
           dueDate: dueDate ? new Date(dueDate) : null,
           estimatedHours,
           actualHours: 0,
@@ -553,6 +560,8 @@ const app = new Hono()
           position: newPosition,
         })
         .returning();
+
+      console.log(`✅ Task created: ID=${task.id}, IssueId=${task.issueId}, Status=${task.status}, AssigneeId=${task.assigneeId}, ProjectId=${task.projectId}, WorkspaceId=${task.workspaceId}, DueDate=${task.dueDate}`);
 
       // Log task creation activity
       try {

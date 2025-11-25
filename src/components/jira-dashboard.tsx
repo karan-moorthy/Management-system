@@ -515,7 +515,7 @@ export const JiraDashboard = () => {
                   <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
                   <SelectItem value={TaskStatus.IN_REVIEW}>In Review</SelectItem>
                   <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
-                  <SelectItem value={TaskStatus.BACKLOG}>Backlog</SelectItem>
+  
                 </SelectContent>
               </Select>
             </div>

@@ -94,27 +94,28 @@ export const ExcelUploadCard = () => {
   };
 
   const handleDownloadTemplate = async () => {
+    // Generate Excel template with sample data
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Task Import Template');
 
-    // Define columns with proper widths
+    // Define columns with proper widths and keys
     const headers = [
-      { header: 'Summary', width: 25 },
-      { header: 'Summary id', width: 15 },
-      { header: 'Issue id', width: 12 },
-      { header: 'Issue Type', width: 15 },
-      { header: 'Status', width: 15 },
-      { header: 'Project name', width: 20 },
-      { header: 'Priority', width: 12 },
-      { header: 'Resolution', width: 15 },
-      { header: 'Assignee', width: 20 },
-      { header: 'Reporter', width: 20 },
-      { header: 'Creator', width: 20 },
-      { header: 'Created', width: 18 },
-      { header: 'Updated', width: 18 },
-      { header: 'Resolved', width: 18 },
-      { header: 'Due date', width: 18 },
-      { header: 'Labels', width: 20 }
+      { header: 'Summary', key: 'summary', width: 25 },
+      { header: 'Summary id', key: 'summaryId', width: 15 },
+      { header: 'Issue id', key: 'issueId', width: 12 },
+      { header: 'Issue Type', key: 'issueType', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Project name', key: 'projectName', width: 20 },
+      { header: 'Priority', key: 'priority', width: 12 },
+      { header: 'Resolution', key: 'resolution', width: 15 },
+      { header: 'Assignee', key: 'assignee', width: 20 },
+      { header: 'Reporter', key: 'reporter', width: 20 },
+      { header: 'Creator', key: 'creator', width: 20 },
+      { header: 'Created', key: 'created', width: 18 },
+      { header: 'Updated', key: 'updated', width: 18 },
+      { header: 'Resolved', key: 'resolved', width: 18 },
+      { header: 'Due date', key: 'dueDate', width: 18 },
+      { header: 'Labels', key: 'labels', width: 20 }
     ];
 
     worksheet.columns = headers;
@@ -125,7 +126,7 @@ export const ExcelUploadCard = () => {
     headerRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFFFFF00' } // Yellow background
+      fgColor: { argb: 'E1C16E' } // Yellow background
     };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     headerRow.height = 20;
@@ -140,20 +141,66 @@ export const ExcelUploadCard = () => {
       };
     });
 
-    // Add two empty rows for data entry
-    worksheet.addRow({});
-    worksheet.addRow({});
-    
-    // Add instruction row
-    const instructionRow = worksheet.addRow({
-      Summary: '(The titles should not be modified under any circumstances.)'
+    // Add sample data row for reference
+    console.log('Adding sample data row...');
+    const sampleRow = worksheet.addRow({
+      summary: 'About the task summary',
+      summaryId: 'Optional / Auto-generated',
+      issueId: 'BUG-123',
+      issueType: 'Task / Bug / Epic / Story / Subtask / Improvement',
+      status: 'To Do / In Progress / In Review / Done',
+      projectName: 'Project name',
+      priority: 'Low / Medium / High / Critical',
+      resolution: 'Optional / Auto-generated',
+      assignee: 'Person to whom the task is assigned',
+      reporter: 'Person who reported the task',
+      creator: 'Person who created the task',
+      created: 'Date of creation: 2025-01-15',
+      updated: 'Date of last update: 2025-01-20',
+      resolved: 'Date of resolution: 2025-01-25',
+      dueDate: 'Deadline: 2025-02-01',
+      labels: 'Module name'
+
     });
-    instructionRow.font = { italic: true, color: { argb: 'FFFF0000' }, size: 10 };
-    instructionRow.fill = {
+    console.log('Sample row added at row number:', sampleRow.number);
+    
+    // Style sample row
+    sampleRow.font = { italic: true, color: { argb: 'FF666666' }, size: 10 };
+    sampleRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFFFD966' } // Light yellow background
+      fgColor: { argb: 'FFF0F0F0' } // Light gray background
     };
+    
+    // Apply borders to sample row
+    sampleRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+        left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+        bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+        right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+      };
+    });
+    
+    // Add one empty row for data entry
+    worksheet.addRow({});
+    
+    // Add instruction note row
+    const noteRow = worksheet.addRow({
+      summary: 'NOTE: Required fields are Summary and Project name. Summary id, Issue id, and Resolution are optional (auto-generated if empty).'
+    });
+    
+    // Merge cells for the note to span across all columns
+    worksheet.mergeCells(`A${noteRow.number}:P${noteRow.number}`);
+    
+    noteRow.font = { bold: true, color: { argb: 'FFFF0000' }, size: 10 };
+    noteRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFEAA7' } // Light orange background
+    };
+    noteRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+    noteRow.height = 30;
 
     // Apply borders to all rows
     [2, 3, 4].forEach(rowNum => {
