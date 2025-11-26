@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { 
@@ -30,8 +30,14 @@ import { CollapsibleSection } from "./collapsible-section";
 
 export const Sidebar = () => {
   const pathname = usePathname();
-  const { data: isAdmin } = useIsGlobalAdmin();
+  const { data: isAdmin, isLoading } = useIsGlobalAdmin();
   const [expandedSections, setExpandedSections] = useState<string[]>(["Home", "Projects"]);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering role-specific content after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) =>
@@ -91,7 +97,7 @@ export const Sidebar = () => {
               <FileText className="size-4" />
               Report
             </Link>
-            {isAdmin && (
+            {mounted && isAdmin && (
               <>
                 <Link
                   href="/profile"
@@ -136,7 +142,7 @@ export const Sidebar = () => {
         </button>
         {expandedSections.includes("Projects") && (
           <nav className="flex flex-col gap-1 ml-4 mt-1">
-            {isAdmin && (
+            {mounted && isAdmin && (
               <>
                 <Link
                   href="/add-requirements"
@@ -198,13 +204,24 @@ export const Sidebar = () => {
             <Clock className="size-4" />
             My Attendance
           </Link>
-          <Link
-            href="/weekly-report"
-            className="flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground hover:bg-muted"
-          >
-            <Calendar className="size-4" />
-            Weekly Report
-          </Link>
+          {mounted && !isAdmin && (
+            <Link
+              href="/weekly-report"
+              className="flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground hover:bg-muted"
+            >
+              <Calendar className="size-4" />
+              Weekly Report
+            </Link>
+          )}
+          {mounted && isAdmin && (
+            <Link
+              href="/report-download"
+              className="flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground hover:bg-muted"
+            >
+              <FileText className="size-4" />
+              Report Download
+            </Link>
+          )}
         </nav>
       </CollapsibleSection>
 

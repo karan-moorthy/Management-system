@@ -1,4 +1,5 @@
 import { FolderIcon, ListChecksIcon, UserIcon, CalendarIcon, CalendarRangeIcon } from "lucide-react";
+import { useState, useEffect } from "react";
 
 import { useGetMembers } from "@/features/members/api/use-get-members";
 import { useGetProjects } from "@/features/projects/api/use-get-projects";
@@ -25,6 +26,11 @@ interface DataFiltersProps {
 export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
   const workspaceId = useWorkspaceId();
   const { data: isAdmin, isLoading: isLoadingRole } = useIsGlobalAdmin();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({
     workspaceId,
@@ -113,7 +119,27 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
           <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
         </SelectContent>
       </Select>
-      {isAdmin && (
+      <Select
+        defaultValue={month ?? undefined}
+        onValueChange={(value) => {
+          onMonthChange(value);
+        }}
+      >
+        <SelectTrigger className="w-full lg:w-auto h-8">
+          <div className="flex items-center pr-2">
+            <CalendarIcon className="size-4 mr-2" />
+            <SelectValue placeholder="All months" />
+          </div>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All months</SelectItem>
+          <SelectSeparator />
+          <SelectItem value="current">This Month</SelectItem>
+          <SelectItem value="last">Last Month</SelectItem>
+          <SelectItem value="next">Next Month</SelectItem>
+        </SelectContent>
+      </Select>
+      {mounted && isAdmin && (
         <Select
           defaultValue={assigneeId ?? undefined}
           onValueChange={(value) => {
@@ -137,26 +163,6 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
           </SelectContent>
         </Select>
       )}
-      <Select
-        defaultValue={month ?? undefined}
-        onValueChange={(value) => {
-          onMonthChange(value);
-        }}
-      >
-        <SelectTrigger className="w-full lg:w-auto h-8">
-          <div className="flex items-center pr-2">
-            <CalendarIcon className="size-4 mr-2" />
-            <SelectValue placeholder="All months" />
-          </div>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All months</SelectItem>
-          <SelectSeparator />
-          <SelectItem value="current">This Month</SelectItem>
-          <SelectItem value="last">Last Month</SelectItem>
-          <SelectItem value="next">Next Month</SelectItem>
-        </SelectContent>
-      </Select>
       <Select
         defaultValue={week ?? undefined}
         onValueChange={(value) => {

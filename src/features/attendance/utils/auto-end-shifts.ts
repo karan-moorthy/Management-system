@@ -31,9 +31,9 @@ export async function autoEndExpiredShifts() {
           .set({
             shiftEndTime: midnightAfterShift,
             totalDuration: duration,
-            endActivity: "Shift automatically ended at midnight",
+            endActivity: "Shift automatically ended at midnight - Not ended manually",
             dailyTasks: shift.dailyTasks || ["Auto-ended at midnight - No tasks entered"],
-            status: "COMPLETED",
+            status: "AUTO_COMPLETED",
             updatedAt: now,
           })
           .where(eq(attendance.id, shift.id));

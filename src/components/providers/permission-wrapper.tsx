@@ -4,26 +4,18 @@ import { ReactNode } from "react";
 import { PermissionProvider } from "./permission-provider";
 import { useGetCurrentUserRole } from "@/features/members/api/use-get-user-role";
 import { MemberRole } from "@/features/members/types";
-import { Loader2 } from "lucide-react";
 
 interface PermissionWrapperProps {
   children: ReactNode;
 }
 
 export function PermissionWrapper({ children }: PermissionWrapperProps) {
-  const { data: roleData, isLoading } = useGetCurrentUserRole();
+  const { data: roleData } = useGetCurrentUserRole();
 
-  // Show loading state while fetching role to prevent UI flicker
-  if (isLoading || !roleData) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const role = roleData.role as MemberRole;
-  const workspaceId = roleData.workspaceId || "";
+  // Render immediately with default permissions to prevent flickering
+  // The query will update in the background and React will re-render when data arrives
+  const role = (roleData?.role as MemberRole) || MemberRole.MEMBER;
+  const workspaceId = roleData?.workspaceId || "";
 
   return (
     <PermissionProvider

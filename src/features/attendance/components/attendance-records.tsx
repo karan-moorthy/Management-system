@@ -36,21 +36,22 @@ interface AttendanceRecordsProps {
   workspaceId?: string;
 }
 
-// Helper function to get week bounds (Monday to Sunday)
+// Helper function to get week bounds (Monday to Sunday) using ISO week standard
 const getWeekBounds = (weekString: string) => {
   const [year, week] = weekString.split('-W').map(Number);
   
-  // Get January 1st of the year
-  const jan1 = new Date(year, 0, 1);
-  const jan1Day = jan1.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  // ISO week date calculation
+  // Week 1 is the week with the first Thursday of the year
+  const jan4 = new Date(year, 0, 4); // January 4th is always in week 1
+  const jan4Day = jan4.getDay(); // 0 = Sunday, 1 = Monday, etc.
   
-  // Find the first Monday of the year
-  const daysToMonday = jan1Day === 0 ? 1 : jan1Day === 1 ? 0 : 8 - jan1Day;
-  const firstMonday = new Date(year, 0, 1 + daysToMonday);
+  // Find the Monday of week 1
+  const mondayOfWeek1 = new Date(jan4);
+  mondayOfWeek1.setDate(jan4.getDate() - (jan4Day === 0 ? 6 : jan4Day - 1));
   
   // Calculate the start of the requested week (Monday)
-  const weekStart = new Date(firstMonday);
-  weekStart.setDate(firstMonday.getDate() + (week - 1) * 7);
+  const weekStart = new Date(mondayOfWeek1);
+  weekStart.setDate(mondayOfWeek1.getDate() + (week - 1) * 7);
   weekStart.setHours(0, 0, 0, 0);
   
   // Calculate the end of the week (Sunday)
@@ -171,17 +172,44 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Attendance Records');
 
+    // Group records by employee and date
+    const groupedData = new Map<string, any>();
+    
+    dataToDownload.forEach((record: any) => {
+      const dateKey = new Date(record.shiftStartTime).toDateString();
+      const groupKey = `${record.userId}_${dateKey}`;
+      
+      if (!groupedData.has(groupKey)) {
+        groupedData.set(groupKey, {
+          date: dateKey,
+          employeeName: record.userName || "N/A",
+          email: record.userEmail || "N/A",
+          shifts: [],
+          totalDuration: 0,
+          statuses: new Set<string>(),
+        });
+      }
+      
+      const group = groupedData.get(groupKey)!;
+      group.shifts.push({
+        startTime: formatTime(record.shiftStartTime),
+        endTime: record.shiftEndTime ? formatTime(record.shiftEndTime) : "In Progress",
+        duration: record.totalDuration || 0,
+      });
+      group.totalDuration += record.totalDuration || 0;
+      group.statuses.add(record.status);
+    });
+
     // Define columns with proper widths
     worksheet.columns = [
       { header: 'Date', key: 'date', width: 15 },
       { header: 'Employee Name', key: 'employeeName', width: 25 },
       { header: 'Email', key: 'email', width: 30 },
-      { header: 'Start Time', key: 'startTime', width: 12 },
-      { header: 'End Time', key: 'endTime', width: 12 },
-      { header: 'Duration', key: 'duration', width: 12 },
-      { header: 'Status', key: 'status', width: 12 },
-      { header: 'End Activity', key: 'endActivity', width: 20 },
-      { header: 'Tasks', key: 'tasks', width: 50 },
+      { header: 'Start Time', key: 'startTime', width: 20 },
+      { header: 'End Time', key: 'endTime', width: 20 },
+      { header: 'Total Duration', key: 'duration', width: 15 },
+      { header: 'Shifts', key: 'shifts', width: 10 },
+      { header: 'Status', key: 'status', width: 15 },
     ];
 
     // Style the header row
@@ -195,19 +223,71 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     headerRow.height = 20;
 
-    // Add data rows
-    dataToDownload.forEach((record: any) => {
-      worksheet.addRow({
-        date: formatDate(record.shiftStartTime),
-        employeeName: record.userName || "N/A",
-        email: record.userEmail || "N/A",
-        startTime: formatTime(record.shiftStartTime),
-        endTime: record.shiftEndTime ? formatTime(record.shiftEndTime) : "In Progress",
-        duration: record.totalDuration ? formatDuration(record.totalDuration) : "N/A",
-        status: record.status,
-        endActivity: record.endActivity || "N/A",
-        tasks: record.dailyTasks ? (record.dailyTasks as string[]).join(', ') : "N/A",
+    // Add merged data rows
+    groupedData.forEach((group) => {
+      const sortedShifts = group.shifts.sort((a: any, b: any) => {
+        const timeA = a.startTime.split(':').map(Number);
+        const timeB = b.startTime.split(':').map(Number);
+        return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
       });
+      
+      // Format shift times with modern arrow styling
+      const startTimes = sortedShifts.map((s: any, i: any) => 
+        `▸ ${s.startTime}`
+      ).join('\n');
+      
+      const endTimes = sortedShifts.map((s: any, i: any) => 
+        `▸ ${s.endTime}`
+      ).join('\n');
+      
+      const statusText = Array.from(group.statuses).includes('AUTO_COMPLETED') 
+        ? 'AUTO_COMPLETED' 
+        : Array.from(group.statuses).join(', ');
+      
+      const row = worksheet.addRow({
+        date: formatDate(group.date),
+        employeeName: group.employeeName,
+        email: group.email,
+        startTime: startTimes,
+        endTime: endTimes,
+        duration: formatDuration(group.totalDuration),
+        shifts: group.shifts.length,
+        status: statusText,
+      });
+      
+      // Modern styling with proper alignment
+      row.alignment = { vertical: 'top', wrapText: true };
+      
+      if (group.shifts.length > 1) {
+        row.height = 18 * group.shifts.length;
+        // Highlight multi-shift rows with subtle background
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF8F9FA' }
+          };
+        });
+      }
+      
+      // Add borders for cleaner look
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+        };
+      });
+      
+      // Highlight total duration cell
+      const durationCell = row.getCell('duration');
+      durationCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFEAA7' } // Light yellow/gold highlight
+      };
+      durationCell.font = { bold: true };
     });
 
     // Apply borders to all cells
@@ -266,11 +346,11 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
 
       // Add summary row
       const totalMinutes = dataToDownload.reduce((sum: number, r: any) => sum + (r.totalDuration || 0), 0);
-      const avgMinutes = totalMinutes / dataToDownload.length;
+      const uniqueDates = new Set(dataToDownload.map((r: any) => new Date(r.shiftStartTime).toDateString()));
       csvRows.push('');
+      csvRows.push(`Total Days,${uniqueDates.size}`);
       csvRows.push(`Total Records,${dataToDownload.length}`);
       csvRows.push(`Total Hours,${(totalMinutes / 60).toFixed(2)}`);
-      csvRows.push(`Average Hours/Day,${(avgMinutes / 60).toFixed(2)}`);
 
       const csvContent = csvRows.join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -315,7 +395,13 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
         const startingDate = formatDate(sortedRecords[0].shiftStartTime);
         const endingDate = formatDate(sortedRecords[sortedRecords.length - 1].shiftStartTime);
         const totalMinutes = sortedRecords.reduce((sum, r) => sum + (r.totalDuration || 0), 0);
-        const totalDays = sortedRecords.length;
+        
+        // Count unique dates instead of total records
+        const uniqueDates = new Set(
+          sortedRecords.map(r => new Date(r.shiftStartTime).toDateString())
+        );
+        const totalDays = uniqueDates.size;
+        
         const totalHours = (totalMinutes / 60).toFixed(2);
         const duration = formatDuration(totalMinutes);
 
@@ -396,11 +482,17 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
         });
       });
 
+      // Count unique dates for total days
+      const uniqueDates = new Set(
+        filteredRecords.map((r: any) => new Date(r.shiftStartTime).toDateString())
+      );
+      const totalDays = uniqueDates.size;
+      
       // Add summary row
       const summaryRow = worksheet.addRow({
         employeeName: '',
         email: 'TOTAL',
-        date: `${filteredRecords.length} Days`,
+        date: `${totalDays} Days`,
         startTime: '',
         endTime: '',
         duration: `${totalHours}h ${totalMins}m`
@@ -492,13 +584,19 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
         const endDate = formatDate(sortedRecords[sortedRecords.length - 1].shiftStartTime);
         const durationStr = `${totalHours}h ${totalMins}m`;
         
+        // Count unique dates instead of total records
+        const uniqueDates = new Set(
+          sortedRecords.map(r => new Date(r.shiftStartTime).toDateString())
+        );
+        const totalDays = uniqueDates.size;
+        
         worksheet.addRow({
           employeeName: employee?.name || 'Unknown',
           email: employee?.email || 'N/A',
           startingDate: startDate,
           endingDate: endDate,
           duration: durationStr,
-          totalDays: records.length,
+          totalDays: totalDays,
           totalHours: `${totalHours}h ${totalMins}m`
         });
       });
@@ -886,15 +984,25 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
                 <div>
                   <p className="text-muted-foreground">Status</p>
                   <Badge
-                    variant={selectedRecord.status === "COMPLETED" ? "default" : "secondary"}
+                    variant={
+                      selectedRecord.status === "COMPLETED" 
+                        ? "default" 
+                        : selectedRecord.status === "AUTO_COMPLETED"
+                        ? "secondary"
+                        : "outline"
+                    }
                     className="gap-1"
                   >
-                    {selectedRecord.status === "COMPLETED" ? (
+                    {selectedRecord.status === "COMPLETED" || selectedRecord.status === "AUTO_COMPLETED" ? (
                       <CheckCircle2 className="size-3" />
                     ) : (
                       <Clock className="size-3" />
                     )}
-                    {selectedRecord.status === "COMPLETED" ? "Completed" : "In Progress"}
+                    {selectedRecord.status === "COMPLETED" 
+                      ? "Completed" 
+                      : selectedRecord.status === "AUTO_COMPLETED"
+                      ? "Auto-Completed"
+                      : "In Progress"}
                   </Badge>
                 </div>
               </div>
@@ -942,27 +1050,27 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
           {selectedEmployeeFilter !== "all" ? (
             // Single Employee Preview
             <div className="space-y-4">
-              <div className="rounded-md border">
+              <div className="rounded-md border bg-card">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>End Time</TableHead>
-                      <TableHead>Duration</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Employee Name</TableHead>
+                      <TableHead className="font-semibold">Email</TableHead>
+                      <TableHead className="font-semibold">Date</TableHead>
+                      <TableHead className="font-semibold">Start Time</TableHead>
+                      <TableHead className="font-semibold">End Time</TableHead>
+                      <TableHead className="font-semibold">Duration</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRecords.map((record: any) => (
-                      <TableRow key={record.id}>
+                      <TableRow key={record.id} className="hover:bg-muted/50">
                         <TableCell className="font-medium">{record.userName || "N/A"}</TableCell>
-                        <TableCell>{record.userEmail || "N/A"}</TableCell>
+                        <TableCell className="text-muted-foreground">{record.userEmail || "N/A"}</TableCell>
                         <TableCell>{formatDate(record.shiftStartTime)}</TableCell>
                         <TableCell>{formatTime(record.shiftStartTime)}</TableCell>
-                        <TableCell>{record.shiftEndTime ? formatTime(record.shiftEndTime) : "In Progress"}</TableCell>
-                        <TableCell>{record.totalDuration ? formatDuration(record.totalDuration) : "N/A"}</TableCell>
+                        <TableCell>{record.shiftEndTime ? formatTime(record.shiftEndTime) : <span className="text-muted-foreground">In Progress</span>}</TableCell>
+                        <TableCell className="font-medium">{record.totalDuration ? formatDuration(record.totalDuration) : <span className="text-muted-foreground">N/A</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -970,23 +1078,23 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
               </div>
               
               {/* Summary Section */}
-              <div className="rounded-lg border bg-yellow-50 p-4">
+              <div className="rounded-lg border bg-muted/50 p-4">
                 <h3 className="font-semibold text-sm mb-3">Summary</h3>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Total Records</p>
-                    <p className="font-bold text-lg">{filteredRecords.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Total Hours</p>
-                    <p className="font-bold text-lg">
-                      {(filteredRecords.reduce((sum: number, r: any) => sum + (r.totalDuration || 0), 0) / 60).toFixed(2)}h
+                    <p className="text-muted-foreground text-xs">Total Days</p>
+                    <p className="font-bold text-lg text-foreground">
+                      {new Set(filteredRecords.map((r: any) => new Date(r.shiftStartTime).toDateString())).size}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Average Hours/Day</p>
-                    <p className="font-bold text-lg">
-                      {(filteredRecords.reduce((sum: number, r: any) => sum + (r.totalDuration || 0), 0) / 60 / filteredRecords.length).toFixed(2)}h
+                    <p className="text-muted-foreground text-xs">Total Records</p>
+                    <p className="font-bold text-lg text-foreground">{filteredRecords.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Total Hours</p>
+                    <p className="font-bold text-lg text-foreground">
+                      {(filteredRecords.reduce((sum: number, r: any) => sum + (r.totalDuration || 0), 0) / 60).toFixed(2)}h
                     </p>
                   </div>
                 </div>
@@ -994,17 +1102,17 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
             </div>
           ) : (
             // Bulk Report Preview
-            <div className="rounded-md border">
+            <div className="rounded-md border bg-card">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Starting Date</TableHead>
-                    <TableHead>Ending Date</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Total Days</TableHead>
-                    <TableHead>Total Hours</TableHead>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-semibold">Employee Name</TableHead>
+                    <TableHead className="font-semibold">Email</TableHead>
+                    <TableHead className="font-semibold">Starting Date</TableHead>
+                    <TableHead className="font-semibold">Ending Date</TableHead>
+                    <TableHead className="font-semibold">Duration</TableHead>
+                    <TableHead className="font-semibold">Total Days</TableHead>
+                    <TableHead className="font-semibold">Total Hours</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1030,19 +1138,25 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
                       const startingDate = formatDate(sortedRecords[0].shiftStartTime);
                       const endingDate = formatDate(sortedRecords[sortedRecords.length - 1].shiftStartTime);
                       const totalMinutes = sortedRecords.reduce((sum, r) => sum + (r.totalDuration || 0), 0);
-                      const totalDays = sortedRecords.length;
+                      
+                      // Count unique dates instead of total records
+                      const uniqueDates = new Set(
+                        sortedRecords.map(r => new Date(r.shiftStartTime).toDateString())
+                      );
+                      const totalDays = uniqueDates.size;
+                      
                       const totalHours = (totalMinutes / 60).toFixed(2);
                       const duration = formatDuration(totalMinutes);
 
                       return (
-                        <TableRow key={userId}>
+                        <TableRow key={userId} className="hover:bg-muted/50">
                           <TableCell className="font-medium">{employeeName}</TableCell>
-                          <TableCell>{email}</TableCell>
+                          <TableCell className="text-muted-foreground">{email}</TableCell>
                           <TableCell>{startingDate}</TableCell>
                           <TableCell>{endingDate}</TableCell>
-                          <TableCell>{duration}</TableCell>
+                          <TableCell className="font-medium">{duration}</TableCell>
                           <TableCell>{totalDays}</TableCell>
-                          <TableCell>{totalHours}h</TableCell>
+                          <TableCell className="font-semibold">{totalHours}h</TableCell>
                         </TableRow>
                       );
                     });

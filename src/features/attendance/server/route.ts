@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "@/db";
 import { attendance, members, users } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or, inArray } from "drizzle-orm";
 import { MemberRole } from "@/features/members/types";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { autoEndExpiredShifts } from "../utils/auto-end-shifts";
@@ -163,9 +163,9 @@ const app = new Hono()
             .set({
               shiftEndTime: midnightAfterShift,
               totalDuration: duration,
-              endActivity: "Shift automatically ended at midnight",
+              endActivity: "Shift automatically ended at midnight - Not ended manually",
               dailyTasks: ["Auto-ended at midnight - No tasks entered"],
-              status: "COMPLETED",
+              status: "AUTO_COMPLETED",
               updatedAt: new Date(),
             })
             .where(eq(attendance.id, activeShift.id))
@@ -207,7 +207,7 @@ const app = new Hono()
         .from(attendance)
         .where(and(
           eq(attendance.userId, user.id),
-          eq(attendance.status, "COMPLETED")
+          inArray(attendance.status, ["COMPLETED", "AUTO_COMPLETED"])
         ))
         .orderBy(desc(attendance.shiftStartTime));
 
@@ -299,7 +299,7 @@ const app = new Hono()
         })
         .from(attendance)
         .innerJoin(users, eq(attendance.userId, users.id))
-        .where(eq(attendance.status, "COMPLETED"))
+        .where(inArray(attendance.status, ["COMPLETED", "AUTO_COMPLETED"]))
         .orderBy(desc(attendance.shiftStartTime));
 
       return c.json({ data: records });

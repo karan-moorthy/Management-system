@@ -183,7 +183,7 @@ export const attendance = pgTable('attendance', {
   totalDuration: integer('total_duration'), // in minutes
   endActivity: text('end_activity'), // What was accomplished at end
   dailyTasks: jsonb('daily_tasks'), // array of task strings
-  status: text('status').notNull().default('IN_PROGRESS'), // IN_PROGRESS, COMPLETED
+  status: text('status').notNull().default('IN_PROGRESS'), // IN_PROGRESS, COMPLETED, AUTO_COMPLETED
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -350,4 +350,43 @@ export const notifications = pgTable('notifications', {
   isReadIdx: index('notifications_is_read_idx').on(table.isRead),
   // Composite index for user's unread notifications
   userUnreadIdx: index('notifications_user_unread_idx').on(table.userId, table.isRead, table.createdAt),
+}));
+
+// Weekly Reports table - Employee weekly report submissions
+export const weeklyReports = pgTable('weekly_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Date range
+  fromDate: timestamp('from_date').notNull(),
+  toDate: timestamp('to_date').notNull(),
+  
+  // Employee details
+  department: text('department').notNull(), // Auto-filled from user profile
+  
+  // Report content - JSON structure: { "2025-11-25": "description", "2025-11-26": "description" }
+  dailyDescriptions: jsonb('daily_descriptions').$type<Record<string, string>>().notNull().default({}),
+  
+  // File uploads - JSON array: [{ date: "2025-11-25", fileName: "file.pdf", fileUrl: "/uploads/...", fileSize: 12345 }]
+  uploadedFiles: jsonb('uploaded_files').$type<Array<{
+    date: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize: number;
+    uploadedAt: string;
+  }>>().notNull().default([]),
+  
+  // Status tracking
+  status: text('status').notNull().default('submitted'), // submitted, reviewed, archived
+  isDraft: text('is_draft').notNull().default('false'), // 'true' for drafts, 'false' for submitted reports
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index('weekly_reports_user_idx').on(table.userId),
+  departmentIdx: index('weekly_reports_department_idx').on(table.department),
+  fromDateIdx: index('weekly_reports_from_date_idx').on(table.fromDate),
+  toDateIdx: index('weekly_reports_to_date_idx').on(table.toDate),
+  createdAtIdx: index('weekly_reports_created_at_idx').on(table.createdAt),
+  isDraftIdx: index('weekly_reports_is_draft_idx').on(table.isDraft),
 }));

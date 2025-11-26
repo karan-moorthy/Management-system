@@ -11,6 +11,12 @@ export const useGetCurrentUserRole = () => {
     queryFn: async () => {
       const response = await client.api.members["role"].$get();
 
+      // If unauthorized, return null instead of throwing
+      // This is expected when user is not logged in
+      if (response.status === 401) {
+        return { role: null, workspaceId: null };
+      }
+
       if (!response.ok) {
         throw new Error("Failed to fetch user role");
       }
@@ -18,6 +24,11 @@ export const useGetCurrentUserRole = () => {
       const { data } = await response.json();
       return data;
     },
+    retry: false, // Don't retry 401 errors
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to prevent refetching
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnMount: false, // Don't refetch on component mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   return query;
