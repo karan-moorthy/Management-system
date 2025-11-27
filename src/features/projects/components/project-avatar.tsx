@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface ProjectAvatarProps {
   image?: string;
-  name: string;
+  name?: string | null;
   className?: string;
   fallbackClassName?: string;
 }
@@ -17,12 +17,15 @@ export const ProjectAvatar = ({
   className,
   fallbackClassName,
 }: ProjectAvatarProps) => {
+  // Handle null or undefined name
+  const displayName = name || "N/A";
+  
   if (image) {
     return (
       <div
         className={cn("relative size-5 rounded-md overflow-hidden", className)}
       >
-        <Image src={image} alt={name} fill className="object-cover" />
+        <Image src={image} alt={displayName} fill className="object-cover" />
       </div>
     );
   }
@@ -35,7 +38,7 @@ export const ProjectAvatar = ({
           fallbackClassName
         )}
       >
-        {name[0]}
+        {displayName[0]}
       </AvatarFallback>
     </Avatar>
   );

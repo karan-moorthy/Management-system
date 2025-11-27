@@ -1,9 +1,8 @@
 "use client";
 
 import { z } from "zod";
-import Image from "next/image";
-import { ImageIcon, CalendarIcon, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { CalendarIcon, X } from "lucide-react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
@@ -13,7 +12,6 @@ import { useGetMembers } from "@/features/members/api/use-get-members";
 
 import { cn } from "@/lib/utils";
 import { DottedSeparator } from "@/components/dotted-separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -50,7 +48,6 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
   const members = membersData?.documents || [];
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof createProjectSchema>>({
     resolver: zodResolver(createProjectSchema),
@@ -89,13 +86,6 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
 
   const handleRemoveAssignee = (userId: string) => {
     setSelectedAssignees(selectedAssignees.filter((id) => id !== userId));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form.setValue("image", file);
-    }
   };
 
   return (
@@ -233,79 +223,6 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                   })}
                 </div>
               </div>
-
-              <FormField
-                control={form.control}
-                name="image"
-                render={({ field }) => (
-                  <div className="flex flex-col gap-y-2">
-                    <div className="flex items-center gap-x-5">
-                      {field.value ? (
-                        <div className="size-[72px] relative rounded-md overflow-hidden">
-                          <Image
-                            src={
-                              field.value instanceof File
-                                ? URL.createObjectURL(field.value)
-                                : field.value
-                            }
-                            alt="Logo"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <Avatar className="size-[72px]">
-                          <AvatarFallback>
-                            <ImageIcon className="size-[36px] text-neutral-400" />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div className="flex flex-col">
-                        <p className="text-sm">Project Icon</p>
-                        <p className="text-sm text-muted-foreground">
-                          JPG, PNG, SVG or JPEG, max 1MB
-                        </p>
-                        <input
-                          className="hidden"
-                          accept=".jpg, .png, .jpeg, .svg"
-                          type="file"
-                          ref={inputRef}
-                          onChange={handleImageChange}
-                          disabled={isPending}
-                        />
-                        {field.value ? (
-                          <Button
-                            variant="destructive"
-                            type="button"
-                            disabled={isPending}
-                            size="xs"
-                            className="w-fit mt-2"
-                            onClick={() => {
-                              field.onChange(null);
-                              if (inputRef.current) {
-                                inputRef.current.value = "";
-                              }
-                            }}
-                          >
-                            Remove Image
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="teritary"
-                            type="button"
-                            disabled={isPending}
-                            size="xs"
-                            className="w-fit mt-2"
-                            onClick={() => inputRef.current?.click()}
-                          >
-                            Upload Image
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              />
             </div>
             <DottedSeparator className="py-7" />
             <div className="flex items-center justify-between">
