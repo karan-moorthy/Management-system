@@ -4,8 +4,8 @@ import path from 'path';
 // Load environment variables from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-import { db } from './src/db/index.js';
-import { tasks } from './src/db/schema.js';
+import { db } from '../../src/db/index.js';
+import { tasks } from '../../src/db/schema.js';
 
 async function checkTasks() {
   try {

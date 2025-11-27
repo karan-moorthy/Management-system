@@ -11,8 +11,9 @@ export const useCreateRequirement = () => {
       customer: string;
       projectManagerId: string;
       projectDescription?: string;
-      sampleInputFiles?: string[];
-      expectedOutputFiles?: string[];
+      dueDate?: string;
+      sampleInputFiles?: Array<{ name: string; content: string }>;
+      expectedOutputFiles?: Array<{ name: string; content: string }>;
     }) => {
       const response = await client.api.requirements.$post({ json });
       

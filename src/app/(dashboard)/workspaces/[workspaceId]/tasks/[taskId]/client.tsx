@@ -24,11 +24,11 @@ export const TaskIdClient = () => {
 
   return (
     <div className="flex flex-col">
-      <TaskBreadcrumbs project={data.project} task={data} />
+      <TaskBreadcrumbs project={data.project} task={data as any} />
       <DottedSeparator className="my-6" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TaskOverview task={data} />
-        <TaskDescription task={data} />
+        <TaskOverview task={data as any} />
+        <TaskDescription task={data as any} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { users } from './src/db/schema';
+import { users } from '../../src/db/schema';
 import { eq } from 'drizzle-orm';
 
 config({ path: '.env.local' });

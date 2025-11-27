@@ -30,7 +30,7 @@ export const InviteClient = () => {
 
   const handleAccept = () => {
     acceptInvite(
-      { param: { inviteId } },
+      { param: { invitationId: inviteId } },
       {
         onSuccess: ({ data }) => {
           router.push(`/workspaces/${data.id}`);

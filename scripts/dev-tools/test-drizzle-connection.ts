@@ -1,5 +1,5 @@
-import { db } from './src/db/index';
-import { users, workspaces, tasks, projects, members, invitations } from './src/db/schema';
+import { db } from '../../src/db/index';
+import { users, workspaces, tasks, projects, members, invitations } from '../../src/db/schema';
 import { sql } from 'drizzle-orm';
 
 async function testDrizzleConnection() {

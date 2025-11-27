@@ -1,6 +1,6 @@
 import { config } from "dotenv";
-import { db } from "./src/db";
-import { workspaces, projects } from "./src/db/schema";
+import { db } from "../../src/db";
+import { workspaces, projects } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 
 // Load environment variables

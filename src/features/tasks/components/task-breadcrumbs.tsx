@@ -8,14 +8,13 @@ import { ConditionalGuard } from "@/components/permission-guard";
 import { usePermissionContext } from "@/components/providers/permission-provider";
 
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
-import { Project } from "@/features/projects/types";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 
 import { useDeleteTask } from "../api/use-delete-task";
 import { Task } from "../types";
 
 interface TaskBreadcrumbsProps {
-  project: Project | undefined;
+  project: { id: string; name: string; imageUrl: string | null } | null | undefined;
   task: Task;
 }
 

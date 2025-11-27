@@ -13,6 +13,9 @@ if (!databaseUrl) {
 }
 
 async function applyMigration() {
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set');
+  }
   const sql = postgres(databaseUrl, { max: 1 });
   
   try {
