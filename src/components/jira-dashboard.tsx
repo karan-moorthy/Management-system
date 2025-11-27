@@ -406,17 +406,17 @@ export const JiraDashboard = () => {
   const getStatusBadgeColor = (status: TaskStatus) => {
     switch (status) {
       case TaskStatus.TODO:
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+        return "bg-[hsl(var(--status-todo-bg))]/10 text-[hsl(var(--status-todo))] border-[hsl(var(--status-todo-border))]/30";
       case TaskStatus.IN_PROGRESS:
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+        return "bg-[hsl(var(--status-in-progress-bg))]/10 text-[hsl(var(--status-in-progress))] border-[hsl(var(--status-in-progress-border))]/30";
       case TaskStatus.IN_REVIEW:
-        return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+        return "bg-[hsl(var(--status-in-review-bg))]/10 text-[hsl(var(--status-in-review))] border-[hsl(var(--status-in-review-border))]/30";
       case TaskStatus.DONE:
-        return "bg-green-500/10 text-green-500 border-green-500/20";
+        return "bg-[hsl(var(--status-done-bg))]/10 text-[hsl(var(--status-done))] border-[hsl(var(--status-done-border))]/30";
       case TaskStatus.BACKLOG:
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20";
+        return "bg-[hsl(var(--status-backlog-bg))]/10 text-[hsl(var(--status-backlog))] border-[hsl(var(--status-backlog-border))]/30";
       default:
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20";
+        return "bg-[hsl(var(--status-backlog-bg))]/10 text-[hsl(var(--status-backlog))] border-[hsl(var(--status-backlog-border))]/30";
     }
   };
 

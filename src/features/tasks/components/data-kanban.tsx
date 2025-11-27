@@ -196,9 +196,20 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
       // After submission, task will move to IN_REVIEW for admin review
       // Admins can skip this and move tasks directly
       // EXCEPTION: Individual tasks don't need overview form
+      console.log('🔍 Overview form check:', {
+        isAdmin,
+        isIndividualTask,
+        destStatus,
+        sourceStatus,
+        shouldShowForm: !isAdmin && !isIndividualTask && (destStatus === TaskStatus.IN_REVIEW || destStatus === TaskStatus.DONE) && 
+          sourceStatus !== TaskStatus.IN_REVIEW && 
+          sourceStatus !== TaskStatus.DONE
+      });
+      
       if (!isAdmin && !isIndividualTask && (destStatus === TaskStatus.IN_REVIEW || destStatus === TaskStatus.DONE) && 
           sourceStatus !== TaskStatus.IN_REVIEW && 
           sourceStatus !== TaskStatus.DONE) {
+        console.log('✅ Opening overview form for task:', movedTask.summary);
         setTaskForOverview(movedTask);
         setOverviewFormOpen(true);
         

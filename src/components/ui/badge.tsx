@@ -18,15 +18,15 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
         [TaskStatus.TODO]:
-          "border-transparent bg-red-400 text-primary hover:bg-red-400/80",
+          "border-[hsl(var(--status-todo-border))]/30 bg-[hsl(var(--status-todo-bg))]/10 text-[hsl(var(--status-todo))] hover:bg-[hsl(var(--status-todo-bg))]/20",
         [TaskStatus.IN_PROGRESS]:
-          "border-transparent bg-yellow-400 text-primary hover:bg-yellow-400/80",
+          "border-[hsl(var(--status-in-progress-border))]/30 bg-[hsl(var(--status-in-progress-bg))]/10 text-[hsl(var(--status-in-progress))] hover:bg-[hsl(var(--status-in-progress-bg))]/20",
         [TaskStatus.IN_REVIEW]:
-          "border-transparent bg-blue-400 text-primary hover:bg-blue-400/80",
+          "border-[hsl(var(--status-in-review-border))]/30 bg-[hsl(var(--status-in-review-bg))]/10 text-[hsl(var(--status-in-review))] hover:bg-[hsl(var(--status-in-review-bg))]/20",
         [TaskStatus.DONE]:
-          "border-transparent bg-emerald-400 text-primary hover:bg-emerald-400/80",
+          "border-[hsl(var(--status-done-border))]/30 bg-[hsl(var(--status-done-bg))]/10 text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done-bg))]/20",
         [TaskStatus.BACKLOG]:
-          "border-transparent bg-pink-400 text-primary hover:bg-pink-400/80",
+          "border-[hsl(var(--status-backlog-border))]/30 bg-[hsl(var(--status-backlog-bg))]/10 text-[hsl(var(--status-backlog))] hover:bg-[hsl(var(--status-backlog-bg))]/20",
       },
     },
     defaultVariants: {

@@ -257,7 +257,7 @@ const app = new Hono()
         })
         .where(eq(invitations.id, invitationId));
 
-      return c.json({ data: { success: true } });
+      return c.json({ data: { success: true, workspaceId: invitation.workspaceId } });
     }
   )
   .delete("/:invitationId", sessionMiddleware, async (c) => {

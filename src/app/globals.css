@@ -39,32 +39,66 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    
+    /* Status badge colors - Light mode */
+    --status-todo: 214 100% 50%;
+    --status-todo-bg: 214 100% 95%;
+    --status-todo-border: 214 100% 80%;
+    --status-in-progress: 243 75% 59%;
+    --status-in-progress-bg: 243 75% 95%;
+    --status-in-progress-border: 243 75% 80%;
+    --status-in-review: 38 92% 50%;
+    --status-in-review-bg: 38 92% 95%;
+    --status-in-review-border: 38 92% 80%;
+    --status-done: 123 46% 45%;
+    --status-done-bg: 123 46% 95%;
+    --status-done-border: 123 46% 80%;
+    --status-backlog: 215 14% 45%;
+    --status-backlog-bg: 215 14% 95%;
+    --status-backlog-border: 215 14% 80%;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 215 14% 12%;
+    --foreground: 220 13% 93%;
+    --card: 212 12% 18%;
+    --card-foreground: 220 13% 93%;
+    --popover: 215 14% 9%;
+    --popover-foreground: 220 13% 93%;
+    --primary: 214 100% 68%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 212 12% 18%;
+    --secondary-foreground: 220 13% 93%;
+    --muted: 212 12% 18%;
+    --muted-foreground: 217 11% 69%;
+    --accent: 212 12% 18%;
+    --accent-foreground: 220 13% 93%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
+    --destructive-foreground: 220 13% 93%;
+    --border: 215 12% 26%;
+    --input: 215 11% 10%;
+    --ring: 214 100% 68%;
+    --chart-1: 214 100% 68%;
+    --chart-2: 103 64% 54%;
+    --chart-3: 48 100% 60%;
+    --chart-4: 243 67% 75%;
     --chart-5: 340 75% 55%;
+    
+    /* Status badge colors - Dark mode (Jira Midnight) */
+    --status-todo: 214 100% 68%;
+    --status-todo-bg: 214 100% 68%;
+    --status-todo-border: 214 100% 68%;
+    --status-in-progress: 243 67% 75%;
+    --status-in-progress-bg: 243 67% 75%;
+    --status-in-progress-border: 243 67% 75%;
+    --status-in-review: 38 92% 50%;
+    --status-in-review-bg: 38 92% 50%;
+    --status-in-review-border: 38 92% 50%;
+    --status-done: 103 64% 54%;
+    --status-done-bg: 103 64% 54%;
+    --status-done-border: 103 64% 54%;
+    --status-backlog: 217 11% 60%;
+    --status-backlog-bg: 217 11% 60%;
+    --status-backlog-border: 217 11% 60%;
   }
 }
 
@@ -84,4 +118,63 @@ body {
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Jira-style Dark Mode Input Styling */
+@layer components {
+  .jira-input {
+    background-color: #1D1F24;
+    border: 1px solid #2C2F34;
+    color: #EBECF0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease-in-out;
+    outline: none;
+  }
+
+  .jira-input::placeholder {
+    color: #8A9099;
+  }
+
+  .jira-input:hover {
+    border-color: #3A3F44;
+  }
+
+  .jira-input:focus {
+    border-color: #579DFF;
+    box-shadow: 0 0 0 3px rgba(87, 157, 255, 0.25);
+  }
+
+  .jira-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Textarea variant */
+  .jira-textarea {
+    background-color: #1D1F24;
+    border: 1px solid #2C2F34;
+    color: #EBECF0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease-in-out;
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .jira-textarea::placeholder {
+    color: #8A9099;
+  }
+
+  .jira-textarea:hover {
+    border-color: #3A3F44;
+  }
+
+  .jira-textarea:focus {
+    border-color: #579DFF;
+    box-shadow: 0 0 0 3px rgba(87, 157, 255, 0.25);
+  }
 }

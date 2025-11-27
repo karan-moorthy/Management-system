@@ -90,6 +90,7 @@ export function TaskOverviewForm({
   };
 
   const onSubmit = (values: TaskOverviewFormValues) => {
+    console.log('📝 Submitting task overview form for task:', task.id);
     createOverview(
       {
         taskId: task.id,
@@ -102,10 +103,12 @@ export function TaskOverviewForm({
       },
       {
         onSuccess: () => {
+          console.log('✅ Task overview created successfully, calling onSuccess callback');
           form.reset();
           setOutputFile("");
           setFileName("");
           onSuccess?.();
+          console.log('🚪 Closing form dialog');
           onClose();
         },
       }
