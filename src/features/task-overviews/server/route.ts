@@ -99,7 +99,6 @@ const app = new Hono()
                 challenges: data.challenges,
                 additionalRemarks: data.additionalRemarks,
                 timeSpent: data.timeSpent,
-                submittedAt: new Date(),
               })
               .where(eq(taskOverviews.id, existingOverview.id))
               .returning();

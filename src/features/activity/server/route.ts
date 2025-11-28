@@ -121,7 +121,7 @@ const app = new Hono()
     "/task/:taskId",
     sessionMiddleware,
     async (c) => {
-      const { taskId } = c.param();
+      const { taskId } = c.req.param();
 
       const logs = await db
         .select()
@@ -140,7 +140,7 @@ const app = new Hono()
       limit: z.string().optional(),
     })),
     async (c) => {
-      const { workspaceId } = c.param();
+      const { workspaceId } = c.req.param();
       const { limit = "20" } = c.req.valid("query");
 
       const logs = await db

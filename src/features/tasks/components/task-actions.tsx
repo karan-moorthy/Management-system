@@ -53,7 +53,16 @@ export const TaskActions = ({ id, projectId, assigneeId, children }: TaskActions
     const ok = await confirm();
     if (!ok) return;
 
-    mutate({ param: { taskId: id } });
+    mutate(
+      { param: { taskId: id } },
+      {
+        onSuccess: () => {
+          // Navigate and force refresh to ensure fresh data
+          router.push(`/workspaces/${workspaceId}/tasks`);
+          router.refresh();
+        },
+      }
+    );
   };
 
   const onOpenTask = () => {

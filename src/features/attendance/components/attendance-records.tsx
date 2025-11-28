@@ -829,9 +829,9 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
               
               <Button 
                 onClick={() => setReportModalOpen(true)} 
-                disabled={!filteredRecords || filteredRecords.length === 0} 
+                disabled={!filteredRecords || filteredRecords.length === 0}
                 className="gap-2"
-                variant="default"
+                variant="primary"
               >
                 <Eye className="size-4" />
                 View Report ({filteredRecords.length})
@@ -1173,9 +1173,9 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
             onClick={() => {
               downloadReport();
               setReportModalOpen(false);
-            }} 
+            }}
             className="gap-2"
-            variant="default"
+            variant="primary"
           >
             <Download className="size-4" />
             Download Report

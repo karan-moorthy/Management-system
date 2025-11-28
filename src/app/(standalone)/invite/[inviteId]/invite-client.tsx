@@ -30,10 +30,10 @@ export const InviteClient = () => {
 
   const handleAccept = () => {
     acceptInvite(
-      { param: { inviteId } },
+      { param: { invitationId: inviteId } },
       {
         onSuccess: ({ data }: any) => {
-          router.push(`/workspaces/${data.id}`);
+          router.push(`/workspaces/${data.workspaceId}`);
         },
       }
     );
@@ -47,15 +47,15 @@ export const InviteClient = () => {
     return <PageError message="Invitation not found." />;
   }
 
-  const { invitation, workspace } = invitationData;
+  const { workspace, status, expiresAt, ...invitation } = invitationData;
 
-  if (invitation.status !== InvitationStatus.PENDING) {
+  if (status !== InvitationStatus.PENDING) {
     let message = "This invitation is no longer valid.";
-    if (invitation.status === InvitationStatus.ACCEPTED) {
+    if (status === InvitationStatus.ACCEPTED) {
       message = "This invitation has already been accepted.";
-    } else if (invitation.status === InvitationStatus.EXPIRED) {
+    } else if (status === InvitationStatus.EXPIRED) {
       message = "This invitation has expired.";
-    } else if (invitation.status === InvitationStatus.DECLINED) {
+    } else if (status === InvitationStatus.DECLINED) {
       message = "This invitation was declined.";
     }
     
@@ -63,7 +63,7 @@ export const InviteClient = () => {
   }
 
   // Check if invitation has expired
-  if (new Date() > new Date(invitation.expiresAt)) {
+  if (new Date() > new Date(expiresAt)) {
     return <PageError message="This invitation has expired." />;
   }
 

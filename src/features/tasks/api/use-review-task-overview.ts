@@ -19,7 +19,7 @@ export const useReviewTaskOverview = () => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to review task overview");
+        throw new Error((error as any).message || "Failed to review task overview");
       }
 
       return await response.json();

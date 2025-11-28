@@ -37,7 +37,7 @@ export type Task = {
   issueId: string;
   issueType: IssueType;
   status: TaskStatus;
-  projectName: string;
+  projectName: string | null;
   priority: TaskPriority;
   resolution?: Resolution;
   assigneeId?: string;
@@ -61,7 +61,7 @@ export type Task = {
   };
   project?: {
     id: string;
-    name: string;
+    name: string | null;
     imageUrl: string | null;
   };
 };

@@ -48,9 +48,9 @@ export const Analytics = ({ data }: ProjectAnalyticsResponseType) => {
         <div className="flex items-center flex-1">
           <AnalyticsCard
             title="Incomplete Tasks"
-            value={data.incompleteTaskCount}
-            variant={data.incompleteTaskDifference > 0 ? "up" : "down"}
-            increaseValue={data.incompleteTaskDifference}
+            value={data.taskCount - data.completedTaskCount}
+            variant={(data.taskCount - data.completedTaskCount) > (data.taskDifference - data.completedTaskDifference) ? "up" : "down"}
+            increaseValue={(data.taskCount - data.completedTaskCount) - ((data.taskCount - data.taskDifference) - (data.completedTaskCount - data.completedTaskDifference))}
           />
         </div>
       </div>

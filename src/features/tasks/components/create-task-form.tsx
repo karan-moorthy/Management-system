@@ -132,9 +132,14 @@ export const CreateTaskForm = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Project Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., VECV-SPINE" {...field} />
-                        </FormControl>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., VECV-SPINE"
+                              {...field}
+                              // Ensure the input never receives null (form value may be string | null)
+                              value={(field.value ?? "") as string}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

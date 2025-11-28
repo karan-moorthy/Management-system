@@ -13,7 +13,7 @@ import { TaskStatus } from "../types";
 interface EventCardProps {
   title: string;
   assignee: { id: string; name: string; email: string; } | undefined;
-  project: { id: string; name: string; imageUrl: string | null; } | undefined;
+  project: { id: string; name: string | null; imageUrl: string | null; } | undefined;
   status: TaskStatus;
   id: string;
 }

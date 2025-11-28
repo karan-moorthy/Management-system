@@ -47,7 +47,7 @@ interface ActivityLog {
     newValue?: string | null;
     description?: string;
     metadata?: Record<string, any>;
-  };
+  } | null;
   summary: string;
   createdAt: string;
 }
@@ -231,7 +231,7 @@ export const ActivityTimeline = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4" style={{ maxHeight, overflowY: "auto" }}>
-          {Object.entries(groupedActivities).map(([date, dateActivities]) => (
+          {Object.entries(groupedActivities).map(([date, dateActivities], groupIndex) => (
             <div key={date}>
               {showGrouping && (
                 <div className="flex items-center gap-2 mb-3">
@@ -306,7 +306,7 @@ export const ActivityTimeline = ({
               </div>
               
               {/* Separator between date groups */}
-              {showGrouping && index < Object.keys(groupedActivities).length - 1 && (
+              {showGrouping && groupIndex < Object.keys(groupedActivities).length - 1 && (
                 <Separator className="my-4" />
               )}
             </div>

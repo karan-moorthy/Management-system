@@ -5,7 +5,6 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { FixedSizeList as List } from "react-window";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 
@@ -180,7 +179,8 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
             const nextStatus = sourceIndex < destIndex 
               ? statusOrder[sourceIndex + 1] 
               : statusOrder[sourceIndex - 1];
-            const statusNames = {
+            const statusNames: Record<TaskStatus, string> = {
+              [TaskStatus.BACKLOG]: "Backlog",
               [TaskStatus.TODO]: "To Do",
               [TaskStatus.IN_PROGRESS]: "In Progress",
               [TaskStatus.IN_REVIEW]: "In Review",

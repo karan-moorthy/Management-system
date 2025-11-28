@@ -167,6 +167,9 @@ export const activityIcons: Record<ActivityAction, string> = {
   [ActivityAction.COMMENT_DELETED]: '🗑️',
   [ActivityAction.ATTACHMENT_ADDED]: '📎',
   [ActivityAction.ATTACHMENT_REMOVED]: '🗑️',
+  [ActivityAction.OVERVIEW_SUBMITTED]: '📋',
+  [ActivityAction.TASK_APPROVED]: '✅',
+  [ActivityAction.TASK_REWORK_REQUESTED]: '🔙',
 };
 
 // Activity color mapping (for UI badges)
@@ -198,4 +201,7 @@ export const activityColors: Record<ActivityAction, string> = {
   [ActivityAction.COMMENT_DELETED]: 'red',
   [ActivityAction.ATTACHMENT_ADDED]: 'green',
   [ActivityAction.ATTACHMENT_REMOVED]: 'red',
+  [ActivityAction.OVERVIEW_SUBMITTED]: 'blue',
+  [ActivityAction.TASK_APPROVED]: 'green',
+  [ActivityAction.TASK_REWORK_REQUESTED]: 'orange',
 };

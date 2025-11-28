@@ -30,7 +30,7 @@ interface MyAttendanceHistoryProps {
 }
 
 export const MyAttendanceHistory = ({ workspaceId }: MyAttendanceHistoryProps = {}) => {
-  const { data: records, isLoading } = useGetMyAttendance(workspaceId);
+  const { data: records, isLoading } = useGetMyAttendance();
   const { data: projects } = useGetProjects({});
   const updateTasks = useUpdateTasks();
   

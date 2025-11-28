@@ -22,7 +22,7 @@ export const useCreateTaskOverview = () => {
         try {
           const error = await response.json();
           console.error("❌ Error response:", error);
-          errorMessage = error.message || errorMessage;
+          errorMessage = (error as any).message || errorMessage;
         } catch {
           const text = await response.text();
           console.error("Non-JSON error response:", text);

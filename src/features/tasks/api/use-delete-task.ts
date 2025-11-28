@@ -39,7 +39,14 @@ export const useDeleteTask = () => {
       // Force immediate refetch - this ensures UI updates right away
       queryClient.refetchQueries({ 
         queryKey: ["tasks"],
-        type: "active" 
+        type: "active",
+        exact: false
+      });
+      
+      // Also clear any stale queries
+      queryClient.resetQueries({ 
+        queryKey: ["tasks"],
+        exact: false 
       });
     },
     onError: () => {
