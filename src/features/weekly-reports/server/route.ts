@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import { db } from '@/db';
-import { weeklyReports, users, members } from '@/db/schema';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { weeklyReports, users, members, notifications } from '@/db/schema';
+import { eq, and, gte, lte, desc, inArray } from 'drizzle-orm';
 import { MemberRole } from '@/features/members/types';
 
 const app = new Hono()
@@ -69,6 +69,78 @@ const app = new Hono()
         }).returning();
 
         console.log('[Weekly Report Draft] Report created successfully:', report.id, 'isDraft:', report.isDraft);
+
+        // If report is submitted (not a draft), notify all admins and managers
+        if (!isDraft) {
+          console.log('[Weekly Report] Report submitted, notifying admins...');
+          
+          // Get employee details
+          const [employee] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, user.id));
+
+          console.log('[Weekly Report] Employee:', employee?.name, employee?.id);
+
+          // Get all workspace IDs for this user
+          const userWorkspaces = await db
+            .select({ workspaceId: members.workspaceId })
+            .from(members)
+            .where(eq(members.userId, user.id));
+
+          const workspaceIds = userWorkspaces.map(w => w.workspaceId);
+          console.log('[Weekly Report] User workspaces:', workspaceIds.length);
+
+          if (workspaceIds.length > 0) {
+            // Get all admins and managers from user's workspaces
+            const adminMembers = await db
+              .select({
+                userId: members.userId,
+                workspaceId: members.workspaceId,
+                role: members.role,
+              })
+              .from(members)
+              .where(
+                and(
+                  inArray(members.workspaceId, workspaceIds),
+                  inArray(members.role, [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER])
+                )
+              );
+
+            console.log('[Weekly Report] Found', adminMembers.length, 'admins/managers:', 
+              adminMembers.map(a => ({ userId: a.userId, role: a.role })));
+
+            // Create notifications for all admins/managers
+            if (adminMembers.length > 0) {
+              const employeeName = employee?.name || 'An employee';
+              const dateRange = `${new Date(fromDate).toLocaleDateString()} - ${new Date(toDate).toLocaleDateString()}`;
+              
+              const notificationValues = adminMembers.map(admin => ({
+                userId: admin.userId,
+                type: 'WEEKLY_REPORT_SUBMITTED',
+                title: 'New Weekly Report Submitted',
+                message: `${employeeName} submitted a weekly report for ${dateRange}`,
+                actionBy: user.id,
+                actionByName: employeeName,
+                isRead: 'false',
+                createdAt: new Date(),
+              }));
+
+              console.log('[Weekly Report] Creating notifications:', notificationValues);
+
+              const createdNotifications = await db
+                .insert(notifications)
+                .values(notificationValues)
+                .returning();
+
+              console.log('[Weekly Report] Created', createdNotifications.length, 'notifications successfully');
+            } else {
+              console.log('[Weekly Report] No admins/managers found to notify');
+            }
+          } else {
+            console.log('[Weekly Report] User has no workspaces');
+          }
+        }
 
         return c.json({ 
           data: report, 

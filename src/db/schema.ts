@@ -390,3 +390,47 @@ export const weeklyReports = pgTable('weekly_reports', {
   createdAtIdx: index('weekly_reports_created_at_idx').on(table.createdAt),
   isDraftIdx: index('weekly_reports_is_draft_idx').on(table.isDraft),
 }));
+
+// Custom Bug Types table - For user-added bug types
+export const customBugTypes = pgTable('custom_bug_types', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  nameIdx: index('custom_bug_types_name_idx').on(table.name),
+}));
+
+// Bug Tracker table - For bug tracking system
+export const bugs = pgTable('bugs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  bugId: text('bug_id').notNull().unique(), // Auto-generated: BUG-001, BUG-002, etc.
+  assignedTo: uuid('assigned_to').references(() => users.id, { onDelete: 'set null' }), // Bug fixer
+  bugType: text('bug_type').notNull().default('Development'), // UI/UX, Development, Testing, or custom
+  bugDescription: text('bug_description').notNull(),
+  fileUrl: text('file_url'), // Optional file attachment
+  
+  // Status tracking
+  status: text('status').notNull().default('Open'), // Open, In Progress, Resolved, Closed
+  priority: text('priority').default('Medium'), // Low, Medium, High, Critical
+  
+  // Reporter details
+  reportedBy: uuid('reported_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  reportedByName: text('reported_by_name').notNull(), // Denormalized for quick display
+  
+  // Workspace context
+  workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Resolution tracking
+  resolvedAt: timestamp('resolved_at'),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  bugIdIdx: index('bugs_bug_id_idx').on(table.bugId),
+  assignedToIdx: index('bugs_assigned_to_idx').on(table.assignedTo),
+  bugTypeIdx: index('bugs_bug_type_idx').on(table.bugType),
+  statusIdx: index('bugs_status_idx').on(table.status),
+  reportedByIdx: index('bugs_reported_by_idx').on(table.reportedBy),
+  workspaceIdx: index('bugs_workspace_idx').on(table.workspaceId),
+  createdAtIdx: index('bugs_created_at_idx').on(table.createdAt),
+}));

@@ -222,30 +222,30 @@ export const ProfileModal = ({ open, onOpenChange }: ProfileModalProps) => {
             {/* Read-only fields */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-neutral-700">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-neutral-500">Full Name</label>
-                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-sm font-medium truncate">{user.name}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-neutral-500">Date of Birth</label>
-                  <p className="text-sm font-medium">{formatDate(user.dateOfBirth)}</p>
+                  <p className="text-sm font-medium truncate">{formatDate(user.dateOfBirth)}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-neutral-500">Official Email</label>
-                  <p className="text-sm font-medium">{user.email}</p>
+                  <p className="text-sm font-medium truncate">{user.email}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-neutral-500">Designation</label>
-                  <p className="text-sm font-medium">{user.designation || "N/A"}</p>
+                  <p className="text-sm font-medium truncate">{user.designation || "N/A"}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-neutral-500">Department</label>
-                  <p className="text-sm font-medium">{user.department || "N/A"}</p>
+                  <p className="text-sm font-medium truncate">{user.department || "N/A"}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-neutral-500">Date of Joining</label>
-                  <p className="text-sm font-medium">{formatDate(user.dateOfJoining)}</p>
+                  <p className="text-sm font-medium truncate">{formatDate(user.dateOfJoining)}</p>
                 </div>
               </div>
             </div>

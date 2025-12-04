@@ -86,9 +86,9 @@ const app = new Hono()
         if (existingOverview) {
           console.log("Overview already exists with status:", existingOverview.status);
           
-          // If the overview is still pending, allow updating it
-          if (existingOverview.status === OverviewStatus.PENDING) {
-            console.log("Updating existing pending overview");
+          // Allow updating if overview is PENDING or REWORK
+          if (existingOverview.status === OverviewStatus.PENDING || existingOverview.status === OverviewStatus.REWORK) {
+            console.log(`Updating existing ${existingOverview.status} overview`);
             const [updatedOverview] = await db
               .update(taskOverviews)
               .set({
@@ -99,15 +99,20 @@ const app = new Hono()
                 challenges: data.challenges,
                 additionalRemarks: data.additionalRemarks,
                 timeSpent: data.timeSpent,
+                status: OverviewStatus.PENDING, // Reset to PENDING for admin review
+                reviewedBy: null, // Clear previous reviewer
+                reviewedAt: null, // Clear previous review date
+                adminRemarks: null, // Clear previous remarks
+                updatedAt: new Date(),
               })
               .where(eq(taskOverviews.id, existingOverview.id))
               .returning();
 
-            console.log("✅ Overview updated successfully");
+            console.log("✅ Overview updated successfully, status reset to PENDING");
             return c.json({ success: true, data: updatedOverview });
           }
           
-          // If already approved or rejected, don't allow resubmission
+          // If already approved, don't allow resubmission
           return c.json(
             {
               success: false,
@@ -292,12 +297,13 @@ const app = new Hono()
       z.object({
         status: z.enum([OverviewStatus.APPROVED, OverviewStatus.REWORK]),
         adminRemarks: z.string().optional(),
+        reworkDueDate: z.string().optional(),
       })
     ),
     async (c) => {
       const user = c.get("user");
       const { overviewId } = c.req.param();
-      const { status, adminRemarks } = c.req.valid("json");
+      const { status, adminRemarks, reworkDueDate } = c.req.valid("json");
 
       try {
         // Get the overview first to check workspace
@@ -427,13 +433,37 @@ const app = new Hono()
 
         // If rework requested, move task back to IN_PROGRESS
         if (status === OverviewStatus.REWORK) {
+          // Update task status and due date if provided
+          const taskUpdateData: any = {
+            status: TaskStatus.IN_PROGRESS,
+            updated: new Date(),
+          };
+
+          // Set new due date if provided (convert string to Date object)
+          if (reworkDueDate) {
+            taskUpdateData.dueDate = new Date(reworkDueDate);
+          }
+
           await db
             .update(tasks)
-            .set({
-              status: TaskStatus.IN_PROGRESS,
-              updated: new Date(),
-            })
+            .set(taskUpdateData)
             .where(eq(tasks.id, overview.taskId));
+
+          // Clear "In Review" notifications for admins
+          try {
+            await db
+              .delete(notifications)
+              .where(
+                and(
+                  eq(notifications.taskId, task.id),
+                  eq(notifications.type, "TASK_IN_REVIEW"),
+                  eq(notifications.isRead, "false")
+                )
+              );
+            console.log(`✅ Cleared IN_REVIEW notifications for task: ${task.issueId}`);
+          } catch (error) {
+            console.error("Failed to clear IN_REVIEW notifications:", error);
+          }
 
           // Log activity
           try {
@@ -461,21 +491,56 @@ const app = new Hono()
             console.error("Failed to log rework request activity:", error);
           }
 
-          // Send notification to employee
+          // Send notification to employee with output files
           if (task.assigneeId) {
             try {
+              // Build message with admin remarks prominently
+              let title = "Rework Requested";
+              let message = `Task "${task.summary}" needs rework and has been moved to In Progress.`;
+              
+              // Add admin remarks as the primary information
+              if (adminRemarks && adminRemarks.trim()) {
+                message = `Admin Feedback: ${adminRemarks}\n\nTask "${task.summary}" has been moved to In Progress for rework.`;
+              }
+
+              // Add due date if provided
+              if (reworkDueDate) {
+                const dueDate = new Date(reworkDueDate);
+                message += `\n\nDue Date: ${dueDate.toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}`;
+              }
+
+              // Add proof of work summary at the end
+              const proofOfWork = overview.proofOfWork as any;
+              if (proofOfWork) {
+                const fileCount = (proofOfWork.files?.length || 0) + 
+                                (proofOfWork.screenshots?.length || 0);
+                const linkCount = proofOfWork.links?.length || 0;
+                const commitCount = proofOfWork.githubCommits?.length || 0;
+                
+                if (fileCount > 0 || linkCount > 0 || commitCount > 0) {
+                  const parts = [];
+                  if (fileCount > 0) parts.push(`${fileCount} file(s)`);
+                  if (linkCount > 0) parts.push(`${linkCount} link(s)`);
+                  if (commitCount > 0) parts.push(`${commitCount} commit(s)`);
+                  message += `\n\nYour submission: ${parts.join(', ')}`;
+                }
+              }
+
               await db.insert(notifications).values({
                 userId: task.assigneeId,
                 taskId: task.id,
                 type: "TASK_REWORK",
-                title: "Rework Requested",
-                message: `Your task "${task.summary}" requires rework. The task has been moved back to In Progress.${
-                  adminRemarks ? ` Admin remarks: ${adminRemarks}` : ""
-                }`,
+                title,
+                message,
                 actionBy: user.id,
                 actionByName: user.name,
                 isRead: "false",
-                createdAt: new Date(), // Explicitly set current UTC timestamp
+                createdAt: new Date(),
               });
             } catch (error) {
               console.error("Failed to send rework notification:", error);

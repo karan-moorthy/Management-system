@@ -18,7 +18,8 @@ import {
   User,
   UserPen,
   FileCheck,
-  Calendar
+  Calendar,
+  Bug
 } from "lucide-react";
 import { GoHome, GoHomeFill, GoCheckCircle, GoCheckCircleFill } from "react-icons/go";
 import { usePathname } from "next/navigation";
@@ -48,7 +49,7 @@ export const Sidebar = () => {
   };
 
   const isHomeActive = pathname === "/dashboard" || pathname === "/report" || pathname === "/profile" || pathname === "/edit-profile";
-  const isProjectsActive = pathname === "/projects" || pathname === "/new-project" || pathname === "/tasks" || pathname === "/summary";
+  const isProjectsActive = pathname === "/projects" || pathname === "/new-project" || pathname === "/tasks" || pathname === "/summary" || pathname === "/bugs";
 
   return (
     <aside className="h-full bg-muted/50 dark:bg-muted/30 p-4 w-full border-r border-border overflow-y-auto">
@@ -175,6 +176,16 @@ export const Sidebar = () => {
             >
               <GoalIcon className="size-4" />
               Add Tasks
+            </Link>
+            <Link
+              href="/bugs"
+              className={cn(
+                "flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground",
+                pathname === "/bugs" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
+              )}
+            >
+              <Bug className="size-4" />
+              Bug Tracker
             </Link>
             <Link
               href="/summary"

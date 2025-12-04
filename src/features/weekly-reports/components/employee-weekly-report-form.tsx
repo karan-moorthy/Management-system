@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSubmitWeeklyReport } from "../api/use-submit-weekly-report";
 import { useGetMyReports } from "../api/use-get-weekly-reports";
@@ -33,6 +34,13 @@ interface DailyEntry {
   date: string;
   description: string;
   files: File[];
+  uploadedFiles?: Array<{
+    date: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize: number;
+    uploadedAt: string;
+  }>;
 }
 
 export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: string }) {
@@ -104,23 +112,45 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
           setSelectedDepartment(existingDraft.department);
           setValue("department", existingDraft.department);
 
-          // Load daily descriptions
+          // Load daily descriptions and uploaded files
           const loadedEntries: Record<string, DailyEntry> = {};
           const dailyDescs = existingDraft.dailyDescriptions as Record<string, string>;
+          const uploadedFilesData = existingDraft.uploadedFiles as Array<{
+            date: string;
+            fileName: string;
+            fileUrl: string;
+            fileSize: number;
+            uploadedAt: string;
+          }> || [];
           
-          if (dailyDescs && typeof dailyDescs === 'object') {
-            Object.keys(dailyDescs).forEach((date) => {
-              loadedEntries[date] = {
-                date,
-                description: dailyDescs[date] || "",
-                files: [], // Files are already uploaded, so we don't load them back as File objects
-              };
-            });
+          // Create a map of date to uploaded files
+          const filesByDate = new Map<string, typeof uploadedFilesData>();
+          uploadedFilesData.forEach((file) => {
+            if (!filesByDate.has(file.date)) {
+              filesByDate.set(file.date, []);
+            }
+            filesByDate.get(file.date)!.push(file);
+          });
 
-            setDailyEntries(loadedEntries);
-            console.log('[Draft Load] Loaded entries:', Object.keys(loadedEntries).length);
-            toast.info("Existing draft loaded for this date range", { duration: 3000 });
-          }
+          // Get all unique dates from both descriptions and uploaded files
+          const allDates = new Set([
+            ...Object.keys(dailyDescs || {}),
+            ...Array.from(filesByDate.keys())
+          ]);
+
+          allDates.forEach((date) => {
+            loadedEntries[date] = {
+              date,
+              description: dailyDescs?.[date] || "",
+              files: [], // New files to be uploaded
+              uploadedFiles: filesByDate.get(date) || [], // Previously uploaded files
+            };
+          });
+
+          setDailyEntries(loadedEntries);
+          console.log('[Draft Load] Loaded entries:', Object.keys(loadedEntries).length);
+          console.log('[Draft Load] Loaded files:', uploadedFilesData.length);
+          toast.info("Existing draft loaded for this date range", { duration: 3000 });
         } else {
           console.log('[Draft Load] Draft already loaded, skipping to preserve edits');
         }
@@ -146,6 +176,7 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
               date: dateStr,
               description: "",
               files: [],
+              uploadedFiles: [],
             };
           }
         });
@@ -180,6 +211,16 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
       [date]: {
         ...prev[date],
         files: prev[date].files.filter((_, i) => i !== fileIndex),
+      },
+    }));
+  };
+
+  const removeUploadedFile = (date: string, fileIndex: number) => {
+    setDailyEntries((prev) => ({
+      ...prev,
+      [date]: {
+        ...prev[date],
+        uploadedFiles: prev[date].uploadedFiles?.filter((_, i) => i !== fileIndex) || [],
       },
     }));
   };
@@ -302,6 +343,12 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
     Object.entries(dailyEntries).forEach(([entryDate, entry]) => {
       dailyDescriptions[entryDate] = entry.description;
 
+      // Add previously uploaded files
+      if (entry.uploadedFiles && entry.uploadedFiles.length > 0) {
+        uploadedFiles.push(...entry.uploadedFiles);
+      }
+
+      // Add new files to upload
       entry.files.forEach((file) => {
         uploadedFiles.push({
           date: entryDate,
@@ -512,18 +559,19 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
                             </Button>
                           </div>
 
-                          {/* File List */}
+                          {/* File List - New Files */}
                           {entry?.files && entry.files.length > 0 && (
                             <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">New Files to Upload:</p>
                               {entry.files.map((file, fileIndex) => (
                                 <div
                                   key={fileIndex}
-                                  className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
+                                  className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md text-sm"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <FileIcon className="h-4 w-4" />
-                                    <span className="truncate max-w-[300px]">{file.name}</span>
-                                    <span className="text-muted-foreground">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                                    <FileIcon className="h-4 w-4 flex-shrink-0" />
+                                    <span className="truncate flex-1 min-w-0 text-xs sm:text-sm">{file.name}</span>
+                                    <span className="text-muted-foreground text-xs flex-shrink-0">
                                       ({(file.size / 1024).toFixed(1)} KB)
                                     </span>
                                   </div>
@@ -535,6 +583,39 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Previously Uploaded Files */}
+                          {entry?.uploadedFiles && entry.uploadedFiles.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">Previously Uploaded Files:</p>
+                              {entry.uploadedFiles.map((file, fileIndex) => (
+                                <div
+                                  key={fileIndex}
+                                  className="flex items-center justify-between gap-2 p-2 bg-blue-50 dark:bg-blue-950 rounded-md text-sm border border-blue-200 dark:border-blue-800"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                                    <FileIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                                    <span className="truncate flex-1 min-w-0 text-xs sm:text-sm">{file.fileName}</span>
+                                    <span className="text-muted-foreground text-xs flex-shrink-0">
+                                      ({(file.fileSize / 1024).toFixed(1)} KB)
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant="secondary" className="text-xs flex-shrink-0">Saved</Badge>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeUploadedFile(dateStr, fileIndex)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                             </div>

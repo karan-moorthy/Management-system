@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export const NotificationButton = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [expandedNotifications, setExpandedNotifications] = useState<Set<string>>(new Set());
   const { data: notifications = [], isLoading } = useGetNotifications();
   const unreadCount = useGetUnreadCount();
   const { mutate: markAsRead } = useMarkNotificationRead();
@@ -31,7 +32,30 @@ export const NotificationButton = () => {
 
   console.log("🔔 Notifications loaded:", notifications.length, "Unread:", unreadCount);
 
-  const handleNotificationClick = (notification: any) => {
+  const toggleExpanded = (notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedNotifications(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(notificationId)) {
+        newSet.delete(notificationId);
+      } else {
+        newSet.add(notificationId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleNotificationClick = (notification: any, e: React.MouseEvent) => {
+    // If clicking on a long notification, just expand it
+    if (notification.message.length > 100) {
+      toggleExpanded(notification.id, e);
+      // Mark as read
+      if (notification.isRead === "false") {
+        markAsRead(notification.id);
+      }
+      return;
+    }
+
     // Mark as read
     if (notification.isRead === "false") {
       markAsRead(notification.id);
@@ -48,6 +72,10 @@ export const NotificationButton = () => {
         router.push(`/tasks?taskId=${notification.taskId}`);
         setOpen(false);
       }
+    } else if (notification.type === "BUG_ASSIGNED" || notification.type === "BUG_STATUS_UPDATED") {
+      // Navigate to bug tracker page
+      router.push("/bugs");
+      setOpen(false);
     }
   };
 
@@ -140,46 +168,62 @@ export const NotificationButton = () => {
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notification: any) => (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "relative group hover:bg-muted/50 transition-colors",
-                    notification.isRead === "false" && "bg-primary/5"
-                  )}
-                >
-                  <button
-                    onClick={() => handleNotificationClick(notification)}
-                    className="w-full text-left px-4 py-3"
+              {notifications.map((notification: any) => {
+                const isExpanded = expandedNotifications.has(notification.id);
+                const isLongMessage = notification.message.length > 100;
+                
+                return (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      "relative group hover:bg-muted/50 transition-colors",
+                      notification.isRead === "false" && "bg-primary/5"
+                    )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "mt-1 h-2 w-2 rounded-full flex-shrink-0",
-                        notification.isRead === "false" ? "bg-primary" : "bg-transparent"
-                      )} />
-                      <div className="flex-1 space-y-1 pr-8">
-                        <p className="text-sm font-medium leading-none">
-                          {notification.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getRelativeTime(notification.createdAt)}
-                        </p>
+                    <button
+                      onClick={(e) => handleNotificationClick(notification, e)}
+                      className="w-full text-left px-4 py-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "mt-1 h-2 w-2 rounded-full flex-shrink-0",
+                          notification.isRead === "false" ? "bg-primary" : "bg-transparent"
+                        )} />
+                        <div className="flex-1 space-y-1 pr-8">
+                          <p className="text-sm font-medium leading-none">
+                            {notification.title}
+                          </p>
+                          <p className={cn(
+                            "text-sm text-muted-foreground whitespace-pre-line",
+                            !isExpanded && isLongMessage && "line-clamp-2"
+                          )}>
+                            {notification.message}
+                          </p>
+                          {isLongMessage && (
+                            <button
+                              onClick={(e) => toggleExpanded(notification.id, e)}
+                              className="text-xs text-primary hover:underline"
+                            >
+                              {isExpanded ? "Show less" : "Show more"}
+                            </button>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {getRelativeTime(notification.createdAt)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handleDeleteNotification(e, notification.id)}
-                  >
-                    <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                  </Button>
-                </div>
-              ))}
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => handleDeleteNotification(e, notification.id)}
+                    >
+                      <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </ScrollArea>

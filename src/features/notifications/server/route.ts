@@ -93,6 +93,30 @@ const app = new Hono()
     }
   })
 
+  // Clear all notifications (MUST come before /:notificationId)
+  .delete("/clear-all", sessionMiddleware, async (c) => {
+    const user = c.get("user");
+
+    console.log('[Clear All Notifications] User:', user.id, 'Clearing all notifications');
+
+    try {
+      const deletedNotifications = await db
+        .delete(notifications)
+        .where(eq(notifications.userId, user.id))
+        .returning();
+
+      console.log('[Clear All Notifications] Deleted', deletedNotifications.length, 'notifications');
+
+      return c.json({ success: true, count: deletedNotifications.length });
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+      return c.json(
+        { success: false, message: "Failed to clear notifications" },
+        500
+      );
+    }
+  })
+
   // Delete individual notification
   .delete("/:notificationId", sessionMiddleware, async (c) => {
     const user = c.get("user");
@@ -121,25 +145,6 @@ const app = new Hono()
       console.error("Failed to delete notification:", error);
       return c.json(
         { success: false, message: "Failed to delete notification" },
-        500
-      );
-    }
-  })
-
-  // Clear all notifications (delete)
-  .delete("/clear-all", sessionMiddleware, async (c) => {
-    const user = c.get("user");
-
-    try {
-      await db
-        .delete(notifications)
-        .where(eq(notifications.userId, user.id));
-
-      return c.json({ success: true });
-    } catch (error) {
-      console.error("Failed to clear notifications:", error);
-      return c.json(
-        { success: false, message: "Failed to clear notifications" },
         500
       );
     }

@@ -131,6 +131,7 @@ export type ReviewTaskOverviewPayload = {
   overviewId: string;
   status: OverviewStatus.APPROVED | OverviewStatus.REWORK;
   adminRemarks?: string;
+  reworkDueDate?: string;
 };
 
 // Notification types

@@ -15,6 +15,7 @@ import activity from "@/features/activity/server/route";
 import taskOverviews from "@/features/task-overviews/server/route";
 import notifications from "@/features/notifications/server/route";
 import weeklyReports from "@/features/weekly-reports/server/route";
+import bugs from "@/features/bugs/server/route";
 
 const app = new Hono().basePath("/api");
 
@@ -33,7 +34,8 @@ const routes = app
   .route("/activity", activity)
   .route("/task-overviews", taskOverviews)
   .route("/notifications", notifications)
-  .route("/weekly-reports", weeklyReports);
+  .route("/weekly-reports", weeklyReports)
+  .route("/bugs", bugs);
 
 export const GET = handle(app);
 export const POST = handle(app);

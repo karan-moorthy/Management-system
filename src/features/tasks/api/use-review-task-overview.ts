@@ -14,6 +14,7 @@ export const useReviewTaskOverview = () => {
         json: {
           status: payload.status,
           adminRemarks: payload.adminRemarks,
+          reworkDueDate: payload.reworkDueDate,
         },
       });
 

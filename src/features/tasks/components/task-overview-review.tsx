@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { CheckCircle, XCircle, File } from "lucide-react";
+import { CheckCircle, XCircle, File, Calendar } from "lucide-react";
 
 import {
   Dialog,
@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { TaskOverview, OverviewStatus } from "../types";
 import { useReviewTaskOverview } from "../api/use-review-task-overview";
+import { useGetTasks } from "../api/use-get-tasks";
 
 interface TaskOverviewReviewProps {
   overview: TaskOverview;
@@ -32,7 +34,20 @@ export function TaskOverviewReview({
   onSuccess,
 }: TaskOverviewReviewProps) {
   const [adminRemarks, setAdminRemarks] = useState("");
+  const [reworkDueDate, setReworkDueDate] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState<string | null>(null);
   const { mutate: reviewOverview, isPending } = useReviewTaskOverview();
+  const { data: tasksData } = useGetTasks({});
+  
+  // Find the task to get its due date
+  useEffect(() => {
+    if (tasksData?.documents && overview.taskId) {
+      const task = tasksData.documents.find((t) => t.id === overview.taskId);
+      if (task?.dueDate) {
+        setTaskDueDate(task.dueDate);
+      }
+    }
+  }, [tasksData, overview.taskId]);
 
   const handleApprove = () => {
     reviewOverview(
@@ -44,6 +59,7 @@ export function TaskOverviewReview({
       {
         onSuccess: () => {
           setAdminRemarks("");
+          setReworkDueDate("");
           onSuccess?.();
           onClose();
         },
@@ -57,15 +73,22 @@ export function TaskOverviewReview({
       return;
     }
 
+    if (!reworkDueDate) {
+      alert("Please set a due date for the rework");
+      return;
+    }
+
     reviewOverview(
       {
         overviewId: overview.id,
         status: OverviewStatus.REWORK,
         adminRemarks: adminRemarks.trim(),
+        reworkDueDate,
       },
       {
         onSuccess: () => {
           setAdminRemarks("");
+          setReworkDueDate("");
           onSuccess?.();
           onClose();
         },
@@ -159,6 +182,25 @@ export function TaskOverviewReview({
             />
           </div>
 
+          {/* Rework Due Date */}
+          {overview.status === OverviewStatus.PENDING && (
+            <div className="space-y-2">
+              <Label htmlFor="reworkDueDate" className="font-semibold flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Rework Due Date
+                <span className="text-xs text-muted-foreground font-normal">(Required for rework)</span>
+              </Label>
+              <Input
+                id="reworkDueDate"
+                type="date"
+                value={reworkDueDate}
+                onChange={(e) => setReworkDueDate(e.target.value)}
+                min={format(new Date(), "yyyy-MM-dd")}
+                className="w-full"
+              />
+            </div>
+          )}
+
           {/* Action Buttons */}
           {overview.status === OverviewStatus.PENDING && (
             <div className="flex justify-end gap-3">
@@ -205,6 +247,21 @@ export function TaskOverviewReview({
                 <p className="text-xs text-muted-foreground">
                   Reviewed on {format(new Date(overview.reviewedAt), "MMM d, yyyy 'at' h:mm a")}
                 </p>
+              )}
+
+              {/* Show rework due date if status is REWORK */}
+              {overview.status === OverviewStatus.REWORK && taskDueDate && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900">Rework Due Date:</p>
+                      <p className="text-sm text-amber-700">
+                        {format(new Date(taskDueDate), "EEEE, MMMM d, yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
