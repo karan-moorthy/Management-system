@@ -4,11 +4,80 @@ import { z } from "zod";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { bugs, customBugTypes, users, notifications, bugComments } from "@/db/schema";
+import { bugs, customBugTypes, users, notifications, bugComments, members } from "@/db/schema";
 import { createBugSchema, updateBugSchema, createBugTypeSchema } from "../schemas";
 import { sessionMiddleware } from "@/lib/session-middleware";
+import { MemberRole } from "@/features/members/types";
+
+/**
+ * Check if user is admin by checking their role in any workspace
+ */
+async function isUserAdmin(userId: string): Promise<boolean> {
+  const memberRoles = await db
+    .select({ role: members.role })
+    .from(members)
+    .where(eq(members.userId, userId))
+    .limit(1);
+  
+  if (memberRoles.length === 0) return false;
+  
+  const role = memberRoles[0].role;
+  return [
+    MemberRole.ADMIN,
+    MemberRole.PROJECT_MANAGER,
+    MemberRole.MANAGEMENT,
+  ].includes(role as MemberRole);
+}
 
 const app = new Hono()
+  // Get ALL bugs (Admin only - for monitoring)
+  .get("/admin/all", sessionMiddleware, async (c) => {
+    const user = c.get("user");
+
+    // Check if user is admin
+    const adminCheck = await isUserAdmin(user.id);
+    if (!adminCheck) {
+      return c.json({ error: "Unauthorized - Admin access required" }, 403);
+    }
+
+    // Get ALL bugs with full details
+    const bugsList = await db
+      .select({
+        bug: bugs,
+        assignedToUser: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+        reportedByUser: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+      })
+      .from(bugs)
+      .leftJoin(users, eq(bugs.assignedTo, users.id))
+      .orderBy(desc(bugs.createdAt));
+
+    // Get comment counts for each bug
+    const bugsWithComments = await Promise.all(
+      bugsList.map(async ({ bug, assignedToUser }) => {
+        const commentCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(bugComments)
+          .where(eq(bugComments.bugId, bug.id));
+
+        return {
+          ...bug,
+          assignedToName: assignedToUser?.name || null,
+          assignedToEmail: assignedToUser?.email || null,
+          commentCount: Number(commentCount[0].count),
+        };
+      })
+    );
+
+    return c.json({ data: bugsWithComments });
+  })
   // Get all bugs for current user (assigned or reported)
   .get("/", sessionMiddleware, async (c) => {
     const user = c.get("user");

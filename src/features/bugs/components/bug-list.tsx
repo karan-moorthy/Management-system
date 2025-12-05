@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Bug, Plus, History } from "lucide-react";
+import { Bug, Plus, History, Shield } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import { useGetAssignedBugs, useGetReportedBugs } from "../api/use-get-bugs";
 import { useCurrent } from "@/features/auth/api/use-current";
+import { useIsGlobalAdmin } from "@/features/members/api/use-get-user-role";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,12 +15,14 @@ import { BugCard } from "./bug-card";
 import { CreateBugModal } from "./create-bug-modal";
 import { BugStatus } from "../types";
 import { BugDetailModal } from "./bug-detail-modal";
+import { AdminBugHistory } from "./admin-bug-history";
 
 export const BugList = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const bugIdFromUrl = searchParams.get("bugId");
   const { data: currentUser } = useCurrent();
+  const { data: isAdmin } = useIsGlobalAdmin();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedBug, setSelectedBug] = useState<any>(null);
@@ -81,13 +84,23 @@ export const BugList = () => {
         </div>
         <CardContent className="p-7">
           <Tabs defaultValue="assigned" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="assigned">
-                Assigned to Me ({activeAssignedBugs.length})
+            <TabsList className={isAdmin ? "grid w-full grid-cols-3 h-auto" : "grid w-full grid-cols-2"}>
+              <TabsTrigger value="assigned" className="whitespace-normal text-xs sm:text-sm py-2">
+                <span className="hidden sm:inline">Assigned to Me ({activeAssignedBugs.length})</span>
+                <span className="sm:hidden">Assigned ({activeAssignedBugs.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="reported">
-                Reported by Me ({activeReportedBugs.length})
+              <TabsTrigger value="reported" className="whitespace-normal text-xs sm:text-sm py-2">
+                <span className="hidden sm:inline">Reported by Me ({activeReportedBugs.length})</span>
+                <span className="sm:hidden">Reported ({activeReportedBugs.length})</span>
               </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger value="admin" className="flex items-center gap-1.5 whitespace-normal text-xs sm:text-sm py-2">
+                  <Shield className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="hidden lg:inline">All Bugs (Admin)</span>
+                  <span className="hidden sm:inline lg:hidden">Admin</span>
+                  <span className="sm:hidden">Admin</span>
+                </TabsTrigger>
+              )}
             </TabsList>
             
             <TabsContent value="assigned" className="mt-6">
@@ -139,6 +152,12 @@ export const BugList = () => {
                 </div>
               )}
             </TabsContent>
+            
+            {isAdmin && (
+              <TabsContent value="admin" className="mt-6">
+                <AdminBugHistory isAdmin={isAdmin} />
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>

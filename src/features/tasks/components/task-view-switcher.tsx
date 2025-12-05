@@ -2,7 +2,7 @@
 
 import { LoaderIcon, PlusIcon, XIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { useProjectId } from "@/features/projects/hooks/use-project-id";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
@@ -18,6 +18,9 @@ import { DataCalendar } from "./data-calendar";
 import { DataFilters } from "./data-filters";
 import { DataKanban } from "./data-kanban";
 import { DataTable } from "./data-table";
+import { JiraBoardView } from "./jira-board-view";
+import { JiraTable } from "./jira-table";
+import { SubtaskModal } from "./subtask-modal";
 
 import { useGetTasks } from "../api/use-get-tasks";
 import { useCreateTaskModal } from "../hooks/use-create-task-modal";
@@ -36,6 +39,10 @@ export const TaskViewSwitcher = ({
   const [{ status, assigneeId, projectId, dueDate, month, week }, setFilters] = useTaskFilters();
   const [view, setView] = useQueryState("task-view", { defaultValue: "table" });
   const { mutate: bulkUpdate } = useBulkUpdateTasks();
+  
+  // Subtask modal state
+  const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
+  const [parentTaskForSubtask, setParentTaskForSubtask] = useState<Task | null>(null);
 
   const workspaceId = useWorkspaceId();
   const paramProjectId = useProjectId();
@@ -71,6 +78,14 @@ export const TaskViewSwitcher = ({
     setFilters({ projectId: null });
   };
 
+  const handleAddSubtask = (parentTaskId: string) => {
+    const parentTask = tasks?.documents.find((t: Task) => t.id === parentTaskId);
+    if (parentTask) {
+      setParentTaskForSubtask(parentTask as Task);
+      setIsSubtaskModalOpen(true);
+    }
+  };
+
   return (
     <Tabs
       defaultValue={view}
@@ -96,6 +111,9 @@ export const TaskViewSwitcher = ({
             <TabsTrigger className="h-8 w-full lg:w-auto" value="table">
               Table
             </TabsTrigger>
+            <TabsTrigger className="h-8 w-full lg:w-auto" value="board">
+              Board
+            </TabsTrigger>
             <TabsTrigger className="h-8 w-full lg:w-auto" value="kanban">
               Kanban
             </TabsTrigger>
@@ -118,7 +136,14 @@ export const TaskViewSwitcher = ({
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <DataTable columns={columns} data={(tasks?.documents ?? []) as Task[]} />
+              <JiraTable 
+                data={(tasks?.documents ?? []) as Task[]}
+                workspaceId={workspaceId}
+                onAddSubtask={handleAddSubtask}
+              />
+            </TabsContent>
+            <TabsContent value="board" className="mt-0">
+              <JiraBoardView workspaceId={workspaceId} />
             </TabsContent>
             <TabsContent value="kanban" className="mt-0">
               <DataKanban
@@ -132,6 +157,13 @@ export const TaskViewSwitcher = ({
           </>
         )}
       </div>
+
+      {/* Subtask Modal */}
+      <SubtaskModal
+        open={isSubtaskModalOpen}
+        onOpenChange={setIsSubtaskModalOpen}
+        parentTask={parentTaskForSubtask}
+      />
     </Tabs>
   );
 };

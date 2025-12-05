@@ -10,6 +10,7 @@ export const createTaskSchema = z.object({
   projectName: z.string().trim().nullable().optional(),
   workspaceId: z.string().optional(),
   projectId: z.string().trim().optional(),
+  parentTaskId: z.string().trim().optional(), // For subtasks
   dueDate: z.coerce.date().optional(),
   assigneeId: z.string().trim().optional(),
   reporterId: z.string().optional(),

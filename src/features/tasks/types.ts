@@ -43,6 +43,7 @@ export type Task = {
   assigneeId?: string;
   reporterId?: string;
   creatorId?: string;
+  parentTaskId?: string;
   created: string;
   updated: string;
   resolved?: string;

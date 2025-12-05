@@ -114,6 +114,7 @@ export const tasks = pgTable('tasks', {
   assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),
   reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'set null' }),
   creatorId: uuid('creator_id').references(() => users.id, { onDelete: 'set null' }),
+  parentTaskId: uuid('parent_task_id').references((): any => tasks.id, { onDelete: 'cascade' }), // For subtask hierarchy
   created: timestamp('created').defaultNow().notNull(),
   updated: timestamp('updated').defaultNow().notNull(),
   resolved: timestamp('resolved'),
@@ -139,6 +140,7 @@ export const tasks = pgTable('tasks', {
   assigneeIdx: index('tasks_assignee_idx').on(table.assigneeId),
   reporterIdx: index('tasks_reporter_idx').on(table.reporterId),
   creatorIdx: index('tasks_creator_idx').on(table.creatorId),
+  parentTaskIdx: index('tasks_parent_task_idx').on(table.parentTaskId),
   projectIdx: index('tasks_project_idx').on(table.projectId),
   workspaceIdx: index('tasks_workspace_idx').on(table.workspaceId),
   statusIdx: index('tasks_status_idx').on(table.status),
@@ -451,4 +453,175 @@ export const bugComments = pgTable('bug_comments', {
   bugIdIdx: index('bug_comments_bug_id_idx').on(table.bugId),
   userIdIdx: index('bug_comments_user_id_idx').on(table.userId),
   createdAtIdx: index('bug_comments_created_at_idx').on(table.createdAt),
+}));
+
+// ============= JIRA-LIKE DYNAMIC FIELD SYSTEM =============
+
+// Custom field definitions table
+export const customFieldDefinitions = pgTable('custom_field_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  fieldName: text('field_name').notNull(), // e.g., "Sprint", "Story Points"
+  fieldKey: text('field_key').notNull(), // e.g., "sprint", "story_points"
+  fieldType: text('field_type').notNull(), // TEXT, NUMBER, DATE, SELECT, MULTI_SELECT, USER, CHECKBOX, URL
+  fieldDescription: text('field_description'),
+  isRequired: boolean('is_required').default(false),
+  defaultValue: text('default_value'),
+  
+  // Configuration
+  fieldOptions: jsonb('field_options'), // For SELECT/MULTI_SELECT
+  validationRules: jsonb('validation_rules'), // {min, max, pattern}
+  
+  // Applicability
+  appliesToIssueTypes: jsonb('applies_to_issue_types'), // Array of issue types
+  appliesToProjects: jsonb('applies_to_projects'), // Array of project IDs
+  
+  // UI Configuration
+  displayOrder: integer('display_order').default(1000),
+  isVisibleInList: boolean('is_visible_in_list').default(false),
+  isVisibleInDetail: boolean('is_visible_in_detail').default(true),
+  isSearchable: boolean('is_searchable').default(true),
+  isFilterable: boolean('is_filterable').default(true),
+  
+  // System fields
+  isSystemField: boolean('is_system_field').default(false),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('custom_field_definitions_workspace_idx').on(table.workspaceId),
+  fieldKeyIdx: index('custom_field_definitions_field_key_idx').on(table.fieldKey),
+  uniqueKeyPerWorkspace: uniqueIndex('custom_field_unique_key_per_workspace').on(table.workspaceId, table.fieldKey),
+}));
+
+// Custom field values table
+export const customFieldValues = pgTable('custom_field_values', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  fieldDefinitionId: uuid('field_definition_id').notNull().references(() => customFieldDefinitions.id, { onDelete: 'cascade' }),
+  value: text('value'), // String value
+  valueNumber: integer('value_number'), // Numeric value
+  valueDate: timestamp('value_date'), // Date value
+  valueUserId: uuid('value_user_id').references(() => users.id, { onDelete: 'set null' }), // User reference
+  valueJson: jsonb('value_json'), // Complex values
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  taskIdx: index('custom_field_values_task_idx').on(table.taskId),
+  fieldDefinitionIdx: index('custom_field_values_field_definition_idx').on(table.fieldDefinitionId),
+  uniqueValuePerTask: uniqueIndex('custom_field_value_unique_per_task').on(table.taskId, table.fieldDefinitionId),
+}));
+
+// Issue type configurations
+export const issueTypeConfigs = pgTable('issue_type_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  issueTypeName: text('issue_type_name').notNull(),
+  issueTypeKey: text('issue_type_key').notNull(),
+  description: text('description'),
+  icon: text('icon'),
+  color: text('color'),
+  isSubtaskType: boolean('is_subtask_type').default(false),
+  workflowId: uuid('workflow_id'),
+  displayOrder: integer('display_order').default(1000),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('issue_type_configs_workspace_idx').on(table.workspaceId),
+  uniqueKeyPerWorkspace: uniqueIndex('issue_type_unique_key_per_workspace').on(table.workspaceId, table.issueTypeKey),
+}));
+
+// Workflow definitions
+export const workflows = pgTable('workflows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  statuses: jsonb('statuses').notNull(), // Array of status objects
+  transitions: jsonb('transitions').notNull(), // Workflow transitions
+  isDefault: boolean('is_default').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('workflows_workspace_idx').on(table.workspaceId),
+}));
+
+// Board configurations
+export const boardConfigs = pgTable('board_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  boardType: text('board_type').notNull().default('KANBAN'), // KANBAN, SCRUM
+  description: text('description'),
+  
+  // Column configuration
+  columns: jsonb('columns').notNull(), // Array of column configs
+  
+  // Filter configuration
+  filterConfig: jsonb('filter_config'),
+  
+  // Display settings
+  cardColorBy: text('card_color_by').default('PRIORITY'),
+  swimlanesBy: text('swimlanes_by'),
+  
+  // Scrum specific
+  sprintDurationWeeks: integer('sprint_duration_weeks'),
+  
+  isFavorite: boolean('is_favorite').default(false),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('board_configs_workspace_idx').on(table.workspaceId),
+  projectIdx: index('board_configs_project_idx').on(table.projectId),
+}));
+
+// Sprints table
+export const sprints = pgTable('sprints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  boardId: uuid('board_id').notNull().references(() => boardConfigs.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  goal: text('goal'),
+  startDate: timestamp('start_date'),
+  endDate: timestamp('end_date'),
+  state: text('state').notNull().default('FUTURE'), // FUTURE, ACTIVE, CLOSED
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('sprints_workspace_idx').on(table.workspaceId),
+  boardIdx: index('sprints_board_idx').on(table.boardId),
+  stateIdx: index('sprints_state_idx').on(table.state),
+}));
+
+// Sprint task assignments
+export const sprintTasks = pgTable('sprint_tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sprintId: uuid('sprint_id').notNull().references(() => sprints.id, { onDelete: 'cascade' }),
+  taskId: uuid('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  addedAt: timestamp('added_at').defaultNow().notNull(),
+  removedAt: timestamp('removed_at'),
+}, (table) => ({
+  sprintIdx: index('sprint_tasks_sprint_idx').on(table.sprintId),
+  taskIdx: index('sprint_tasks_task_idx').on(table.taskId),
+  uniqueSprintTask: uniqueIndex('sprint_task_unique').on(table.sprintId, table.taskId),
+}));
+
+// Board Columns - Dynamic Jira-style columns for task organization
+export const boardColumns = pgTable('board_columns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(), // e.g., "To Do", "In Progress", "Done"
+  position: integer('position').notNull().default(0), // For ordering columns
+  color: text('color').default('#808080'), // Hex color for visual distinction
+  category: text('category').notNull().default('TODO'), // TODO, IN_PROGRESS, DONE
+  isDefault: boolean('is_default').notNull().default(false), // System default columns
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('board_columns_workspace_idx').on(table.workspaceId),
+  positionIdx: index('board_columns_position_idx').on(table.position),
 }));

@@ -10,14 +10,17 @@ import { ChevronDown } from "lucide-react";
 
 import { KanbanCard } from "./kanban-card";
 import { KanbanColumnHeader } from "./kanban-column-header";
+import { AddColumnButton } from "./add-column-button";
 import { TaskOverviewForm } from "./task-overview-form";
 import { usePermissionContext } from "@/components/providers/permission-provider";
 import { MemberRole } from "@/features/members/types";
+import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
+import { useGetDefaultWorkflow } from "../api/use-workflows";
 
 import { Task, TaskStatus } from "../types";
 import "./kanban-optimizations.css";
 
-const boards: TaskStatus[] = [
+const DEFAULT_BOARDS: TaskStatus[] = [
   TaskStatus.TODO,
   TaskStatus.IN_PROGRESS,
   TaskStatus.IN_REVIEW,
@@ -46,6 +49,18 @@ interface DataKanbanProps {
 export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
   const { role } = usePermissionContext();
   const isAdmin = role === MemberRole.ADMIN || role === MemberRole.PROJECT_MANAGER;
+  const workspaceId = useWorkspaceId();
+  
+  // Fetch workflow to get dynamic columns
+  const { data: workflow } = useGetDefaultWorkflow(workspaceId);
+  
+  // Use workflow statuses if available, otherwise fall back to default
+  const boards = useMemo(() => {
+    if (workflow?.statuses && Array.isArray(workflow.statuses)) {
+      return workflow.statuses.map((s: any) => s.key as TaskStatus);
+    }
+    return DEFAULT_BOARDS;
+  }, [workflow]);
   
   // Overview form state
   const [overviewFormOpen, setOverviewFormOpen] = useState(false);
@@ -353,6 +368,18 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
+      <div className="flex gap-2 mb-4">
+        {isAdmin && (
+          <AddColumnButton
+            workspaceId={workspaceId}
+            onColumnAdded={(column) => {
+              console.log("Column added:", column);
+              // Refresh workflow data
+            }}
+          />
+        )}
+      </div>
+      
       <div className="flex overflow-x-auto kanban-horizontal-scroll kanban-board-container">
         {boards.map((board) => {
           const allColumnTasks = tasks[board];

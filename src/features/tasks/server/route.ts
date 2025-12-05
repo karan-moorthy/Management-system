@@ -455,6 +455,7 @@ const app = new Hono()
         projectName,
         workspaceId,
         projectId,
+        parentTaskId,
         dueDate,
         assigneeId,
         reporterId,
@@ -547,6 +548,7 @@ const app = new Hono()
           projectName: projectName || null, // No project for individual tasks
           priority: priority || "Medium",
           resolution,
+          parentTaskId: parentTaskId || null, // Set parent task ID for subtasks
           assigneeId: assigneeId || user.id, // Default to current user if not specified
           reporterId,
           creatorId: creatorId || user.id,
