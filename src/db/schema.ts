@@ -625,3 +625,23 @@ export const boardColumns = pgTable('board_columns', {
   workspaceIdx: index('board_columns_workspace_idx').on(table.workspaceId),
   positionIdx: index('board_columns_position_idx').on(table.position),
 }));
+
+// List View Columns - Dynamic column configuration for the Jira-style list view
+export const listViewColumns = pgTable('list_view_columns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  fieldName: text('field_name').notNull(), // The task field (e.g., 'issueId', 'summary', 'status')
+  displayName: text('display_name').notNull(), // Display name in header (e.g., 'Key', 'Summary')
+  columnType: text('column_type').notNull().default('text'), // text, select, user, date, labels, priority
+  width: integer('width').default(150), // Column width in pixels
+  position: integer('position').notNull().default(0), // Order of columns
+  isVisible: boolean('is_visible').notNull().default(true), // Show/hide column
+  isSortable: boolean('is_sortable').notNull().default(true), // Can column be sorted
+  isFilterable: boolean('is_filterable').notNull().default(true), // Can column be filtered
+  isSystem: boolean('is_system').notNull().default(false), // System columns can't be deleted
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index('list_view_columns_workspace_idx').on(table.workspaceId),
+  positionIdx: index('list_view_columns_position_idx').on(table.workspaceId, table.position),
+}));

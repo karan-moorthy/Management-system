@@ -7,6 +7,7 @@ import workspaces from "@/features/workspaces/server/route";
 import projects from "@/features/projects/server/route";
 import tasks from "@/features/tasks/server/route";
 import customFields from "@/features/tasks/server/custom-fields-route";
+import listViewColumns from "@/features/tasks/server/list-view-columns-route";
 import invitations from "@/features/invitations/server/route";
 import attendance from "@/features/attendance/server/route";
 import profiles from "@/features/profiles/server/route";
@@ -28,6 +29,7 @@ const routes = app
   .route("/projects", projects)
   .route("/tasks", tasks)
   .route("/tasks/custom-fields", customFields)
+  .route("/tasks/list-view", listViewColumns)
   .route("/invitations", invitations)
   .route("/attendance", attendance)
   .route("/profiles", profiles)

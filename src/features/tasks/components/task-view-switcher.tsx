@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 import { useProjectId } from "@/features/projects/hooks/use-project-id";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { useGetProject } from "@/features/projects/api/use-get-project";
+import { useGetWorkspaces } from "@/features/workspaces/api/use-get-workspaces";
 
 import { DottedSeparator } from "@/components/dotted-separator";
 import { Button } from "@/components/ui/button";
@@ -18,8 +19,7 @@ import { DataCalendar } from "./data-calendar";
 import { DataFilters } from "./data-filters";
 import { DataKanban } from "./data-kanban";
 import { DataTable } from "./data-table";
-import { JiraBoardView } from "./jira-board-view";
-import { JiraTable } from "./jira-table";
+import { JiraTableDynamic } from "./jira-table-dynamic";
 import { SubtaskModal } from "./subtask-modal";
 
 import { useGetTasks } from "../api/use-get-tasks";
@@ -48,13 +48,21 @@ export const TaskViewSwitcher = ({
   const paramProjectId = useProjectId();
   const currentProjectId = paramProjectId || projectId;
   
+  // Fallback: Get first workspace if no workspaceId in route (for global tasks page)
+  const { data: workspaces, isLoading: isLoadingWorkspaces } = useGetWorkspaces();
+  
+  // Extract workspace ID - handle both array and documents format
+  const firstWorkspaceId = workspaces?.documents?.[0]?.id || workspaces?.[0]?.id;
+  const effectiveWorkspaceId = workspaceId || firstWorkspaceId;
+
+  
   // Only fetch project if we have a projectId
   const { data: project } = useGetProject({
     projectId: currentProjectId || "skip",
   });
   
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
-    workspaceId,
+    workspaceId: workspaceId, // Only filter by workspace when explicitly in workspace route
     projectId: currentProjectId,
     assigneeId,
     status,
@@ -63,6 +71,7 @@ export const TaskViewSwitcher = ({
     week,
     limit: 2000, // Support large CSV uploads (e.g., 1276 rows)
   });
+
 
   const onKanbanChange = useCallback(
     (tasks: { id: string; status: TaskStatus; position: number }[]) => {
@@ -111,9 +120,6 @@ export const TaskViewSwitcher = ({
             <TabsTrigger className="h-8 w-full lg:w-auto" value="table">
               Table
             </TabsTrigger>
-            <TabsTrigger className="h-8 w-full lg:w-auto" value="board">
-              Board
-            </TabsTrigger>
             <TabsTrigger className="h-8 w-full lg:w-auto" value="kanban">
               Kanban
             </TabsTrigger>
@@ -129,21 +135,25 @@ export const TaskViewSwitcher = ({
         <DottedSeparator className="my-4" />
         <DataFilters hideProjectFilter={hideProjectFilter} />
         <DottedSeparator className="my-4" />
-        {isLoadingTasks ? (
+        {isLoadingTasks || (isLoadingWorkspaces && !workspaceId) ? (
           <div className="w-full border rounded-lg h-[200px] flex flex-col items-center justify-center">
             <LoaderIcon className="size-5 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <JiraTable 
-                data={(tasks?.documents ?? []) as Task[]}
-                workspaceId={workspaceId}
-                onAddSubtask={handleAddSubtask}
-              />
-            </TabsContent>
-            <TabsContent value="board" className="mt-0">
-              <JiraBoardView workspaceId={workspaceId} />
+              {effectiveWorkspaceId ? (
+                <JiraTableDynamic 
+                  key={effectiveWorkspaceId}
+                  data={(tasks?.documents ?? []) as Task[]}
+                  workspaceId={effectiveWorkspaceId}
+                  onAddSubtask={handleAddSubtask}
+                />
+              ) : (
+                <div className="w-full border rounded-lg h-[200px] flex flex-col items-center justify-center">
+                  <p className="text-muted-foreground">No workspace found</p>
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="kanban" className="mt-0">
               <DataKanban

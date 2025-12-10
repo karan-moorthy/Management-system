@@ -354,6 +354,7 @@ const app = new Hono()
           projectName: tasks.projectName,
           priority: tasks.priority,
           resolution: tasks.resolution,
+          parentTaskId: tasks.parentTaskId, // ✅ ADDED: Include parentTaskId for hierarchy
           assigneeId: tasks.assigneeId,
           reporterId: tasks.reporterId,
           creatorId: tasks.creatorId,
@@ -396,6 +397,7 @@ const app = new Hono()
         projectName: row.projectName,
         priority: row.priority,
         resolution: row.resolution,
+        parentTaskId: row.parentTaskId, // ✅ ADDED: Include parentTaskId in response
         assigneeId: row.assigneeId,
         reporterId: row.reporterId,
         creatorId: row.creatorId,

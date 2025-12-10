@@ -60,6 +60,11 @@ export type Task = {
     name: string;
     email: string;
   };
+  reporter?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   project?: {
     id: string;
     name: string | null;
