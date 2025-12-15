@@ -381,7 +381,7 @@ Contributions are what make the open source community amazing! Any contributions
 
 ---
 
-**Built with ❤️ by [Karan](https://github.com/karan4533)**
+**Built by [Karan :)](https://github.com/karan4533)**
 
 <p align="right">
   <a href="#-table-of-contents">⬆️ Back to Top</a>
