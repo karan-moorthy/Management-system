@@ -23,8 +23,8 @@
 
 <!-- TECH STACK BADGES -->
 <p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-007ACC? style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next. js&logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js">
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="TailwindCSS">
@@ -32,7 +32,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/license/karan4533/Proj_Pms? style=flat-square" alt="License">
+  <img src="https://img.shields.io/github/license/karan4533/Proj_Pms?style=flat-square" alt="License">
   <img src="https://img.shields.io/github/stars/karan4533/Proj_Pms?style=flat-square" alt="Stars">
   <img src="https://img.shields.io/github/issues/karan4533/Proj_Pms?style=flat-square" alt="Issues">
 </p>
