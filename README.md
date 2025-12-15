@@ -383,11 +383,7 @@ Contributions are what make the open source community amazing! Any contributions
 
 **Built with ❤️ by [Karan](https://github.com/karan4533)**
 
-<p align="center">
-  <strong>Next.js • TypeScript • PostgreSQL • Drizzle ORM</strong>
-</p>
-
-<p align="center">
+<p align="right">
   <a href="#-table-of-contents">⬆️ Back to Top</a>
 </p>
 
