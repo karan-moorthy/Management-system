@@ -1178,6 +1178,26 @@ const app = new Hono()
         const headers = rowsData[0];
         const createdTasks = [];
         
+        // Create dynamic column mapping based on header row
+        const columnMap: { [key: string]: number } = {};
+        headers.forEach((header, index) => {
+          const normalizedHeader = header.trim().toLowerCase();
+          columnMap[normalizedHeader] = index;
+        });
+        
+        console.log('📋 Column mapping detected:', columnMap);
+        
+        // Helper function to get value from row using header name (case-insensitive, flexible matching)
+        const getCellValue = (row: string[], headerNames: string[]): string => {
+          for (const headerName of headerNames) {
+            const index = columnMap[headerName.toLowerCase()];
+            if (index !== undefined && row[index] !== undefined) {
+              return row[index]?.trim() || '';
+            }
+          }
+          return '';
+        };
+        
         // Filter out empty rows and instruction rows (rows that start with parenthesis or are all empty)
         const dataRows = rowsData.slice(1).filter(row => {
           // Skip if row is empty
@@ -1290,38 +1310,63 @@ const app = new Hono()
           
           console.log(`\n📝 Processing row ${i + 1}/${dataRows.length}:`, row.slice(0, 5));
           
-          if (row.length < 2 || !row[0]) {
-            console.log('⏭️ Skipping row - no summary');
+          // Use dynamic column mapping to extract values
+          const summary = getCellValue(row, ['summary', 'task', 'title', 'description']);
+          
+          if (!summary) {
+            console.log('⏭️ Skipping row - no summary/task/title found');
             continue; // Skip empty rows - Summary must have content
           }
           
-          // Map CSV columns to fields
-          // Expected columns: Summary, Summary id, Issue id, Issue Type, Status, Project name, 
-          // Priority, Resolution, Assignee, Reporter, Creator, Created, Updated, Resolved, 
-          // Due date, Labels, Description, project_id, workspace_id, estimated_hours, actual_hours, position
+          // Map CSV columns to fields using flexible header matching
+          const summaryId = getCellValue(row, ['summary id', 'summaryid', 'task id']);
+          const issueId = getCellValue(row, ['issue id', 'issueid', 'key', 'id']) || `AUTO-${++maxId}`;
+          const issueTypeRaw = getCellValue(row, ['issue type', 'issuetype', 'type']) || 'Task';
+          const status = getCellValue(row, ['status', 'state']) || TaskStatus.TODO;
           
-          const summary = row[0]?.trim() || '';
-          const summaryId = row[1]?.trim() || '';
-          const issueId = row[2]?.trim() || `AUTO-${++maxId}`;
-          const issueType = row[3]?.trim() || 'Task';
-          const status = row[4]?.trim() || TaskStatus.TODO;
-          const projectName = row[5]?.trim() || project.name;
-          const priority = row[6]?.trim() || TaskPriority.MEDIUM;
-          const resolution = row[7]?.trim() || null;
-          const assigneeValue = row[8]?.trim() || '';
-          const reporterValue = row[9]?.trim() || '';
-          const creatorValue = row[10]?.trim() || '';
-          const createdValue = row[11]?.trim() || '';
-          const updatedValue = row[12]?.trim() || '';
-          const resolvedValue = row[13]?.trim() || '';
-          const dueDate = row[14]?.trim() || '';
-          const labels = row[15]?.trim() || '';
-          const description = row[16]?.trim() || '';
-          const csvProjectId = row[17]?.trim() || '';
-          const csvWorkspaceId = row[18]?.trim() || '';
-          const estimatedHours = row[19]?.trim() || '';
-          const actualHours = row[20]?.trim() || '';
-          const positionValue = row[21]?.trim() || '';
+          // Map numeric issue type IDs to text (common in Jira exports)
+          let issueType = issueTypeRaw;
+          const issueTypeMap: { [key: string]: string } = {
+            '1': 'Bug',
+            '2': 'Feature',
+            '3': 'Task',
+            '4': 'Epic',
+            '5': 'Story',
+            '6': 'Subtask',
+            '7': 'Improvement',
+            '10000': 'Epic',
+            '10001': 'Story',
+            '10002': 'Task',
+            '10003': 'Subtask',
+            '10004': 'Bug',
+          };
+          
+          // Check if issueType is numeric and map it
+          if (issueTypeRaw && /^\d+$/.test(issueTypeRaw)) {
+            issueType = issueTypeMap[issueTypeRaw] || 'Task';
+            console.log(`🔄 Mapped numeric issue type ${issueTypeRaw} to ${issueType}`);
+          } else if (issueTypeRaw) {
+            // Ensure the issueType is a valid string
+            issueType = issueTypeRaw;
+          }
+          
+          const projectName = getCellValue(row, ['project name', 'projectname', 'project']) || project.name;
+          const priority = getCellValue(row, ['priority']) || TaskPriority.MEDIUM;
+          const resolution = getCellValue(row, ['resolution']) || null;
+          const assigneeValue = getCellValue(row, ['assignee', 'assigned to', 'owner']);
+          const reporterValue = getCellValue(row, ['reporter', 'reported by']);
+          const creatorValue = getCellValue(row, ['creator', 'created by', 'author']);
+          const createdValue = getCellValue(row, ['created', 'create date', 'created date']);
+          const updatedValue = getCellValue(row, ['updated', 'update date', 'updated date', 'last updated']);
+          const resolvedValue = getCellValue(row, ['resolved', 'resolve date', 'resolved date', 'resolution date']);
+          const dueDate = getCellValue(row, ['due date', 'duedate', 'due']);
+          const labels = getCellValue(row, ['labels', 'tags', 'label']);
+          const description = getCellValue(row, ['description', 'details', 'notes']);
+          const csvProjectId = getCellValue(row, ['project_id', 'projectid']);
+          const csvWorkspaceId = getCellValue(row, ['workspace_id', 'workspaceid']);
+          const estimatedHours = getCellValue(row, ['estimated hours', 'estimatedhours', 'estimate', 'estimated time']);
+          const actualHours = getCellValue(row, ['actual hours', 'actualhours', 'actual time', 'time spent']);
+          const positionValue = getCellValue(row, ['position', 'order', 'rank']);
           
           // Map status to enum
           let taskStatus = TaskStatus.TODO;
