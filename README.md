@@ -381,16 +381,6 @@ Contributions are what make the open source community amazing! Any contributions
 
 ---
 
-## 📝 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-### ⭐ Star this repository if you find it helpful!
-
 **Built with ❤️ by [Karan](https://github.com/karan4533)**
 
 <p align="center">
