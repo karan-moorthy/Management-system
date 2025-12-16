@@ -15,6 +15,7 @@ import { useGetTasks } from "../api/use-get-tasks";
 import { useGetActivityLogs } from "@/features/activity/api/use-get-activity-logs";
 import { useGetCurrentUserRole } from "@/features/members/api/use-get-user-role";
 import { useGetMembers } from "@/features/members/api/use-get-members";
+import { useCurrent } from "@/features/auth/api/use-current";
 import { MemberRole } from "@/features/members/types";
 import { cn } from "@/lib/utils";
 import {
@@ -45,6 +46,10 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
   
   // Get current user role to check if admin
   const { data: roleData, isLoading: isLoadingRole } = useGetCurrentUserRole();
+  
+  // Get current user from auth
+  const { data: currentUser } = useCurrent();
+  const currentUserId = currentUser?.id;
   
   // Fetch members for assignee dropdown
   const { data: members } = useGetMembers({ workspaceId: task?.workspaceId });
@@ -164,7 +169,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
               {/* Description */}
               <div className="mb-8">
                 <h3 className="text-sm font-semibold mb-3">Description</h3>
-                {isEditingDescription ? (
+                {isAdmin && isEditingDescription ? (
                   <div className="space-y-2">
                     <Textarea
                       value={descriptionValue}
@@ -184,13 +189,18 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                   </div>
                 ) : (
                   <div
-                    className="text-sm text-muted-foreground cursor-pointer hover:bg-muted/50 p-3 rounded border min-h-[80px]"
+                    className={cn(
+                      "text-sm text-muted-foreground p-3 rounded border min-h-[80px]",
+                      isAdmin && "cursor-pointer hover:bg-muted/50"
+                    )}
                     onClick={() => {
-                      setDescriptionValue(task.description || "");
-                      setIsEditingDescription(true);
+                      if (isAdmin) {
+                        setDescriptionValue(task.description || "");
+                        setIsEditingDescription(true);
+                      }
                     }}
                   >
-                    {task.description || "Add a description..."}
+                    {task.description || (isAdmin ? "Add a description..." : "No description")}
                   </div>
                 )}
               </div>
@@ -230,19 +240,29 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                         >
                           {/* Work */}
                           <div className="flex items-center gap-2 min-w-0">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSubtaskStatusToggle(subtask);
-                              }}
-                              className="flex-shrink-0"
-                            >
-                              {subtask.status === "Done" ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <Circle className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                              )}
-                            </button>
+                            {(isAdmin || subtask.assigneeId === currentUserId) ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSubtaskStatusToggle(subtask);
+                                }}
+                                className="flex-shrink-0"
+                              >
+                                {subtask.status === "Done" ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                )}
+                              </button>
+                            ) : (
+                              <div className="flex-shrink-0">
+                                {subtask.status === "Done" ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            )}
                             <div 
                               className="min-w-0 flex-1 cursor-pointer"
                               onClick={() => {
@@ -359,24 +379,30 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
 
                           {/* Status */}
                           <div>
-                            <Select
-                              value={subtask.status}
-                              onValueChange={(value) => {
-                                updateTask.mutate({
-                                  json: { status: value as TaskStatus },
-                                  param: { taskId: subtask.id }
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="h-7 text-xs border-muted">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="To Do">TO DO</SelectItem>
-                                <SelectItem value="In Progress">IN PROGRESS</SelectItem>
-                                <SelectItem value="Done">DONE</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            {isAdmin || subtask.assigneeId === currentUserId ? (
+                              <Select
+                                value={subtask.status}
+                                onValueChange={(value) => {
+                                  updateTask.mutate({
+                                    json: { status: value as TaskStatus },
+                                    param: { taskId: subtask.id }
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs border-muted">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="To Do">TO DO</SelectItem>
+                                  <SelectItem value="In Progress">IN PROGRESS</SelectItem>
+                                  <SelectItem value="Done">DONE</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="h-7 px-2 py-1 text-xs border rounded flex items-center">
+                                {subtask.status}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

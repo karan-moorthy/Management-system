@@ -693,7 +693,7 @@ export function JiraTableDynamic({ data, workspaceId, onAddSubtask }: JiraTableP
               <div
                 key={column.id}
                 className="px-4 py-3 text-xs font-medium text-muted-foreground flex items-center gap-2 flex-shrink-0"
-                style={{ width: `${column.width}px` }}
+                style={{ width: column.fieldName === 'issueId' ? `${Math.max(column.width, 180)}px` : `${column.width}px` }}
               >
                 <span>{column.displayName}</span>
               </div>
@@ -932,19 +932,19 @@ const TaskRow = memo(function TaskRow({
           <div
             key={column.id}
             className="px-4 py-2.5 flex items-center flex-shrink-0"
-            style={{ width: `${column.width}px` }}
+            style={{ width: column.fieldName === 'issueId' ? `${Math.max(column.width, 180)}px` : `${column.width}px` }}
           >
             {/* Special handling for issueId column with expand/collapse chevron */}
             {index === 0 && column.fieldName === 'issueId' ? (
-              <div className="flex items-center gap-1.5 w-full">
+              <div className="flex items-center gap-1 w-full overflow-visible">
                 {/* Indentation spacer for hierarchy */}
-                {level > 0 && <div className="w-6 flex-shrink-0" />}
-                {level > 1 && <div className="w-6 flex-shrink-0" />}
-                {level > 2 && <div className="w-6 flex-shrink-0" />}
+                {level > 0 && <div className="w-4 flex-shrink-0" />}
+                {level > 1 && <div className="w-4 flex-shrink-0" />}
+                {level > 2 && <div className="w-4 flex-shrink-0" />}
                 
                 {/* Subtask arrow indicator */}
                 {level > 0 && (
-                  <span className="text-muted-foreground/50 text-xs mr-1 flex-shrink-0">→</span>
+                  <span className="text-muted-foreground/50 text-xs flex-shrink-0">→</span>
                 )}
                 
                 {/* Expand/collapse chevron or spacer */}
@@ -969,8 +969,8 @@ const TaskRow = memo(function TaskRow({
                 
                 {/* Issue ID */}
                 <span className={cn(
-                  "text-xs font-medium truncate",
-                  level > 0 && "text-muted-foreground"
+                  "text-xs font-medium whitespace-nowrap flex-shrink-0 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-500 cursor-pointer",
+                  level > 0 && "text-blue-600 dark:text-blue-400"
                 )}>
                   {task.issueId}
                 </span>
@@ -980,7 +980,7 @@ const TaskRow = memo(function TaskRow({
                 <div className="flex-1 min-w-0 truncate">
                   {renderCell(task, column, (e) => onCellClick(task, column, e))}
                 </div>
-                {hoveredTaskId === task.id && isAdmin && level === 0 && (
+                {hoveredTaskId === task.id && isAdmin && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1022,17 +1022,17 @@ const TaskRow = memo(function TaskRow({
             <div
               key={column.id}
               className="px-4 py-2.5 flex items-center flex-shrink-0"
-              style={{ width: `${column.width}px` }}
+              style={{ width: column.fieldName === 'issueId' ? `${Math.max(column.width, 180)}px` : `${column.width}px` }}
             >
               {index === 0 && column.fieldName === 'issueId' ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   {/* Match parent indentation + one more level */}
-                  {level >= 0 && <div className="w-6 flex-shrink-0" />}
-                  {level >= 1 && <div className="w-6 flex-shrink-0" />}
-                  {level >= 2 && <div className="w-6 flex-shrink-0" />}
-                  <span className="text-muted-foreground/50 text-xs mr-1 flex-shrink-0">→</span>
+                  {level >= 0 && <div className="w-4 flex-shrink-0" />}
+                  {level >= 1 && <div className="w-4 flex-shrink-0" />}
+                  {level >= 2 && <div className="w-4 flex-shrink-0" />}
+                  <span className="text-muted-foreground/50 text-xs flex-shrink-0">→</span>
                   <div className="w-5 flex-shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground">New</span>
+                  <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">New</span>
                 </div>
               ) : column.fieldName === 'summary' ? (
                 <Input
@@ -1108,11 +1108,17 @@ const TaskRow = memo(function TaskRow({
 function organizeTaskHierarchy(tasks: Task[]) {
   const childrenMap = new Map<string, Task[]>();
   const parentTasks: Task[] = [];
+  const taskMap = new Map<string, Task>();
 
   // Sort tasks by creation date to ensure newest tasks appear in correct order
   const sortedTasks = [...tasks].sort((a, b) => 
     new Date(a.created).getTime() - new Date(b.created).getTime()
   );
+
+  // First pass: Build task map
+  sortedTasks.forEach((task) => {
+    taskMap.set(task.id, task);
+  });
 
   sortedTasks.forEach((task) => {
     // Robust null check: treat null, undefined, empty string, or whitespace-only as parent
@@ -1122,11 +1128,20 @@ function organizeTaskHierarchy(tasks: Task[]) {
       // This is a parent task (top-level)
       parentTasks.push(task);
     } else {
-      // This is a child task - add it to parent's children
-      const parentId = task.parentTaskId!.trim(); // Remove any whitespace
-      const siblings = childrenMap.get(parentId) || [];
-      siblings.push(task);
-      childrenMap.set(parentId, siblings);
+      // This is a child task
+      const parentId = task.parentTaskId!.trim();
+      const parentExists = taskMap.has(parentId);
+      
+      if (parentExists) {
+        // Parent exists in current task list - add to children
+        const siblings = childrenMap.get(parentId) || [];
+        siblings.push(task);
+        childrenMap.set(parentId, siblings);
+      } else {
+        // Parent doesn't exist in filtered list - promote child to top level
+        // This ensures subtasks are visible even when parent is filtered out
+        parentTasks.push(task);
+      }
     }
   });
 
@@ -1139,7 +1154,8 @@ function organizeTaskHierarchy(tasks: Task[]) {
       children: children.map(c => ({ id: c.id.slice(0, 8), issueId: c.issueId, parentId: c.parentTaskId?.slice(0, 8) }))
     })),
     sampleParents: parentTasks.slice(0, 3).map(p => ({ id: p.id.slice(0, 8), issueId: p.issueId, parentId: p.parentTaskId })),
-    sampleChildren: tasks.filter(t => t.parentTaskId).slice(0, 3).map(c => ({ id: c.id.slice(0, 8), issueId: c.issueId, parentId: c.parentTaskId?.slice(0, 8) }))
+    sampleChildren: tasks.filter(t => t.parentTaskId).slice(0, 3).map(c => ({ id: c.id.slice(0, 8), issueId: c.issueId, parentId: c.parentTaskId?.slice(0, 8) })),
+    orphanedSubtasks: parentTasks.filter(t => t.parentTaskId).length
   });
 
   return { parentTasks, childrenMap };
