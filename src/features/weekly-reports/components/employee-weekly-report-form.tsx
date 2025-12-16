@@ -43,7 +43,7 @@ interface DailyEntry {
   }>;
 }
 
-export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: string }) {
+export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment: string }) {
   const [dailyEntries, setDailyEntries] = useState<Record<string, DailyEntry>>({});
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState(userDepartment || "");
@@ -70,6 +70,14 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
 
   const fromDate = watch("fromDate");
   const toDate = watch("toDate");
+
+  // Sync department with user profile whenever it changes
+  useEffect(() => {
+    if (userDepartment) {
+      setSelectedDepartment(userDepartment);
+      setValue("department", userDepartment, { shouldValidate: true });
+    }
+  }, [userDepartment, setValue]);
 
   // Generate days array when date range changes
   const days = useMemo(() => {
@@ -236,8 +244,7 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
       dailyDescriptions[date] = dailyEntries[date].description || "";
     });
 
-    // For now, we'll simulate file uploads
-    // In a real app, you'd upload files to storage first and get URLs
+    // Convert files to base64 data URLs so they can be stored
     const uploadedFiles: Array<{
       date: string;
       fileName: string;
@@ -246,20 +253,57 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
       uploadedAt: string;
     }> = [];
 
-    Object.keys(dailyEntries).forEach((date) => {
-      dailyEntries[date].files.forEach((file) => {
-        uploadedFiles.push({
-          date,
-          fileName: file.name,
-          fileUrl: `/uploads/${file.name}`, // Simulated URL
-          fileSize: file.size,
-          uploadedAt: new Date().toISOString(),
-        });
+    // Helper function to convert file to base64
+    const fileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
-    });
+    };
+
+    // Process all files and convert to base64
+    for (const [date, entry] of Object.entries(dailyEntries)) {
+      // Add previously uploaded files (from loaded draft)
+      if (entry.uploadedFiles && entry.uploadedFiles.length > 0) {
+        entry.uploadedFiles.forEach((existingFile) => {
+          uploadedFiles.push({
+            date: existingFile.date,
+            fileName: existingFile.fileName,
+            fileUrl: existingFile.fileUrl,
+            fileSize: existingFile.fileSize,
+            uploadedAt: existingFile.uploadedAt,
+          });
+        });
+      }
+      
+      // Convert new files to base64 and add them
+      for (const file of entry.files) {
+        try {
+          const base64Data = await fileToBase64(file);
+          uploadedFiles.push({
+            date,
+            fileName: file.name,
+            fileUrl: base64Data, // Store as base64 data URL
+            fileSize: file.size,
+            uploadedAt: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error('Error converting file to base64:', file.name, error);
+          toast.error(`Failed to process file: ${file.name}`);
+        }
+      }
+    }
+
+    console.log('[Employee Submit] Daily entries:', Object.keys(dailyEntries).length);
+    console.log('[Employee Submit] Daily entries detail:', dailyEntries);
+    console.log('[Employee Submit] Uploaded files count:', uploadedFiles.length);
+    console.log('[Employee Submit] Uploaded files:', uploadedFiles);
 
     // If there's an existing draft, update it to submitted status
     if (currentDraftId) {
+      console.log('[Employee Submit] Updating existing draft:', currentDraftId);
       updateDraft(
         {
           param: { id: currentDraftId },
@@ -320,7 +364,7 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
     }
   };
 
-  const saveDailyDraft = (date: string) => {
+  const saveDailyDraft = async (date: string) => {
     const data = {
       fromDate: watch("fromDate"),
       toDate: watch("toDate"),
@@ -336,11 +380,21 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
       return;
     }
 
+    // Helper function to convert file to base64
+    const fileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    };
+
     // Build daily descriptions object - save ALL entries
     const dailyDescriptions: Record<string, string> = {};
     const uploadedFiles: any[] = [];
 
-    Object.entries(dailyEntries).forEach(([entryDate, entry]) => {
+    for (const [entryDate, entry] of Object.entries(dailyEntries)) {
       dailyDescriptions[entryDate] = entry.description;
 
       // Add previously uploaded files
@@ -348,17 +402,22 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
         uploadedFiles.push(...entry.uploadedFiles);
       }
 
-      // Add new files to upload
-      entry.files.forEach((file) => {
-        uploadedFiles.push({
-          date: entryDate,
-          fileName: file.name,
-          fileUrl: `/uploads/${file.name}`,
-          fileSize: file.size,
-          uploadedAt: new Date().toISOString(),
-        });
-      });
-    });
+      // Convert new files to base64 and add them
+      for (const file of entry.files) {
+        try {
+          const base64Data = await fileToBase64(file);
+          uploadedFiles.push({
+            date: entryDate,
+            fileName: file.name,
+            fileUrl: base64Data,
+            fileSize: file.size,
+            uploadedAt: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error('Error converting file to base64:', file.name, error);
+        }
+      }
+    }
 
     console.log('[Draft Save] Daily descriptions count:', Object.keys(dailyDescriptions).length);
     console.log('[Draft Save] Uploaded files count:', uploadedFiles.length);
@@ -457,40 +516,37 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment?: 
 
             <div className="space-y-2">
               <Label htmlFor="department">Department *</Label>
-              {userDepartment ? (
+              <div className="relative">
                 <Input
                   id="department"
-                  value={userDepartment}
+                  value={userDepartment || ""}
+                  placeholder="No department assigned"
                   readOnly
-                  className="bg-muted"
+                  className="bg-muted/50 cursor-not-allowed border-muted-foreground/20"
+                  title="Department is automatically populated from your profile"
                 />
+              </div>
+              {!userDepartment ? (
+                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-md">
+                  <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      Department Not Assigned
+                    </p>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                      Please contact your administrator to assign a department to your profile before submitting reports.
+                    </p>
+                  </div>
+                </div>
               ) : (
-                <Select
-                  value={selectedDepartment}
-                  onValueChange={(value) => {
-                    setSelectedDepartment(value);
-                    setValue("department", value, { shouldValidate: true });
-                  }}
-                  disabled={isLoadingDepartments}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isLoadingDepartments ? "Loading..." : "Select department"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="engineering">Engineering</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="product">Product</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="sales">Sales</SelectItem>
-                    <SelectItem value="hr">HR</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
-                    {customDepartments && customDepartments.length > 0 && customDepartments.map((department) => (
-                      <SelectItem key={department.id} value={department.name}>
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Department is automatically populated from your profile
+                </p>
               )}
               {errors.department && (
                 <p className="text-sm text-red-500">{errors.department.message}</p>

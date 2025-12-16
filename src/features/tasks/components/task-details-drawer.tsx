@@ -546,7 +546,35 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
                     Parent
                   </label>
-                  <span className="text-sm text-muted-foreground">None</span>
+                  {task.parentTaskId ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-blue-600">
+                        {/* Find parent task from all tasks */}
+                        {(() => {
+                          const parentTask = (allTasksData?.documents || []).find(
+                            (t: any) => t.id === task.parentTaskId
+                          );
+                          return parentTask ? (
+                            <button
+                              onClick={() => {
+                                // Dispatch custom event to open parent task details
+                                window.dispatchEvent(new CustomEvent('openTaskDetails', {
+                                  detail: { taskId: task.parentTaskId }
+                                }));
+                              }}
+                              className="hover:underline cursor-pointer text-blue-600"
+                            >
+                              {parentTask.issueId} - {parentTask.summary}
+                            </button>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Parent task not found</span>
+                          );
+                        })()}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">None</span>
+                  )}
                 </div>
 
                 {/* Due date */}

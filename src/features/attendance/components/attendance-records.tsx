@@ -896,12 +896,16 @@ export const AttendanceRecords = ({ workspaceId }: AttendanceRecordsProps = {}) 
                         variant={record.status === "COMPLETED" ? "default" : "secondary"}
                         className="gap-1"
                       >
-                        {record.status === "COMPLETED" ? (
+                        {record.status === "COMPLETED" || record.status === "AUTO_COMPLETED" ? (
                           <CheckCircle2 className="size-3" />
                         ) : (
                           <Clock className="size-3" />
                         )}
-                        {record.status === "COMPLETED" ? "Completed" : "In Progress"}
+                        {record.status === "AUTO_COMPLETED" 
+                          ? "Auto Completed" 
+                          : record.status === "COMPLETED" 
+                          ? "Completed" 
+                          : "In Progress"}
                       </Badge>
                     </TableCell>
                     <TableCell>

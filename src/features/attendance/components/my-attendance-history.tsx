@@ -233,12 +233,16 @@ export const MyAttendanceHistory = ({ workspaceId }: MyAttendanceHistoryProps = 
                         variant={record.status === "COMPLETED" ? "default" : "secondary"}
                         className="gap-1"
                       >
-                        {record.status === "COMPLETED" ? (
+                        {record.status === "COMPLETED" || record.status === "AUTO_COMPLETED" ? (
                           <CheckCircle2 className="size-3" />
                         ) : (
                           <Clock className="size-3" />
                         )}
-                        {record.status === "COMPLETED" ? "Completed" : "In Progress"}
+                        {record.status === "AUTO_COMPLETED" 
+                          ? "Auto Completed" 
+                          : record.status === "COMPLETED" 
+                          ? "Completed" 
+                          : "In Progress"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -362,12 +366,16 @@ export const MyAttendanceHistory = ({ workspaceId }: MyAttendanceHistoryProps = 
                     variant={selectedRecord.status === "COMPLETED" ? "default" : "secondary"}
                     className="gap-1"
                   >
-                    {selectedRecord.status === "COMPLETED" ? (
+                    {selectedRecord.status === "COMPLETED" || selectedRecord.status === "AUTO_COMPLETED" ? (
                       <CheckCircle2 className="size-3" />
                     ) : (
                       <Clock className="size-3" />
                     )}
-                    {selectedRecord.status === "COMPLETED" ? "Completed" : "In Progress"}
+                    {selectedRecord.status === "AUTO_COMPLETED" 
+                      ? "Auto Completed" 
+                      : selectedRecord.status === "COMPLETED" 
+                      ? "Completed" 
+                      : "In Progress"}
                   </Badge>
                 </div>
               </div>

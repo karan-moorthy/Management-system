@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, memo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, MoreVertical, Eye, EyeOff, Trash2, Settings } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, MoreVertical, Eye, EyeOff, Trash2, Settings, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { TaskDetailsDrawer } from "./task-details-drawer";
 import { useGetListViewColumns, ListViewColumn, useCreateListViewColumn, useDeleteListViewColumn, useUpdateListViewColumn } from "../api/use-list-view-columns";
 import { useUpdateTask } from "../api/use-update-task";
 import { useCreateTask } from "../api/use-create-task";
+import { useDeleteTask } from "../api/use-delete-task";
 import { useGetMembers } from "@/features/members/api/use-get-members";
 import { useGetCurrentUserRole } from "@/features/members/api/use-get-user-role";
 import { MemberRole } from "@/features/members/types";
@@ -75,6 +76,7 @@ export function JiraTableDynamic({ data, workspaceId, onAddSubtask }: JiraTableP
   const updateColumn = useUpdateListViewColumn();
   const updateTask = useUpdateTask();
   const createTask = useCreateTask();
+  const deleteTask = useDeleteTask();
   const { data: members } = useGetMembers({ workspaceId });
   
   // Get current user role for permissions
@@ -221,6 +223,34 @@ export function JiraTableDynamic({ data, workspaceId, onAddSubtask }: JiraTableP
       newSelected.delete(taskId);
     }
     setSelectedTaskIds(newSelected);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedTaskIds.size === 0) return;
+    
+    const confirmMessage = `Are you sure you want to delete ${selectedTaskIds.size} task${selectedTaskIds.size > 1 ? 's' : ''}?`;
+    if (!confirm(confirmMessage)) return;
+
+    // Delete each selected task
+    selectedTaskIds.forEach((taskId) => {
+      deleteTask.mutate({ param: { taskId } });
+    });
+
+    // Clear selection
+    setSelectedTaskIds(new Set());
+  };
+
+  const handleBulkEdit = () => {
+    if (selectedTaskIds.size === 0) return;
+    
+    // Get the first selected task and open it for editing
+    const firstTaskId = Array.from(selectedTaskIds)[0];
+    const firstTask = data.find(t => t.id === firstTaskId);
+    
+    if (firstTask) {
+      setSelectedTask(firstTask);
+      setIsDrawerOpen(true);
+    }
   };
 
   const handleCreateInlineSubtask = (parentTaskId: string, parentTask: Task) => {
@@ -612,6 +642,36 @@ export function JiraTableDynamic({ data, workspaceId, onAddSubtask }: JiraTableP
 
   return (
     <div className="space-y-4">
+      {/* Bulk Actions Toolbar */}
+      {selectedTaskIds.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-blue-900">
+              {selectedTaskIds.size} task{selectedTaskIds.size > 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkEdit}
+              className="gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto max-w-full">
           <div className="min-w-[1200px]">{/* Ensure minimum width for proper layout */}
@@ -845,12 +905,9 @@ const TaskRow = memo(function TaskRow({
       {/* Parent Row */}
       <div
         className={cn(
-          "group flex items-center min-w-max hover:bg-muted/50 transition-colors cursor-pointer border-l-2",
+          "group flex items-center min-w-max transition-colors cursor-pointer",
           level > 0 && "bg-muted/20",
-          level === 0 && "border-l-transparent",
-          level === 1 && "border-l-blue-200",
-          level === 2 && "border-l-green-200",
-          level >= 3 && "border-l-purple-200"
+          hoveredTaskId === task.id ? "bg-accent" : "hover:bg-muted/40"
         )}
         onClick={() => onTaskClick(task)}
         onMouseEnter={() => setHoveredTaskId(task.id)}
@@ -885,9 +942,9 @@ const TaskRow = memo(function TaskRow({
                 {level > 1 && <div className="w-6 flex-shrink-0" />}
                 {level > 2 && <div className="w-6 flex-shrink-0" />}
                 
-                {/* Tree connector */}
+                {/* Subtask arrow indicator */}
                 {level > 0 && (
-                  <span className="text-muted-foreground text-xs font-light mr-1 flex-shrink-0">└─</span>
+                  <span className="text-muted-foreground/50 text-xs mr-1 flex-shrink-0">→</span>
                 )}
                 
                 {/* Expand/collapse chevron or spacer */}
@@ -901,9 +958,9 @@ const TaskRow = memo(function TaskRow({
                     title={isExpanded ? "Collapse" : "Expand"}
                   >
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-foreground" />
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-foreground" />
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
                   </button>
                 ) : (
@@ -911,14 +968,19 @@ const TaskRow = memo(function TaskRow({
                 )}
                 
                 {/* Issue ID */}
-                <span className="text-xs font-medium truncate">{task.issueId}</span>
+                <span className={cn(
+                  "text-xs font-medium truncate",
+                  level > 0 && "text-muted-foreground"
+                )}>
+                  {task.issueId}
+                </span>
               </div>
             ) : column.fieldName === 'summary' ? (
               <div className="flex items-center gap-2 w-full min-w-0">
                 <div className="flex-1 min-w-0 truncate">
                   {renderCell(task, column, (e) => onCellClick(task, column, e))}
                 </div>
-                {hoveredTaskId === task.id && isAdmin && (
+                {hoveredTaskId === task.id && isAdmin && level === 0 && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -927,7 +989,7 @@ const TaskRow = memo(function TaskRow({
                     className="hover:bg-accent rounded p-1 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
                     title="Add subtask"
                   >
-                    <Plus className="h-4 w-4 text-muted-foreground" />
+                    <Plus className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
                 )}
               </div>
@@ -954,7 +1016,7 @@ const TaskRow = memo(function TaskRow({
 
       {/* Inline Subtask Creation Row */}
       {creatingSubtaskForId === task.id && (
-        <div className="flex items-center min-w-max bg-blue-50 dark:bg-blue-950/20 border-l-2 border-blue-500">
+        <div className="flex items-center min-w-max bg-accent/50">
           <div className="w-12 px-4 py-2.5 flex-shrink-0" />
           {visibleColumns.map((column, index) => (
             <div
@@ -968,19 +1030,19 @@ const TaskRow = memo(function TaskRow({
                   {level >= 0 && <div className="w-6 flex-shrink-0" />}
                   {level >= 1 && <div className="w-6 flex-shrink-0" />}
                   {level >= 2 && <div className="w-6 flex-shrink-0" />}
-                  <span className="text-muted-foreground text-xs font-light mr-1 flex-shrink-0">└─</span>
+                  <span className="text-muted-foreground/50 text-xs mr-1 flex-shrink-0">→</span>
                   <div className="w-5 flex-shrink-0" />
-                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">New</span>
+                  <span className="text-xs font-medium text-muted-foreground">New</span>
                 </div>
               ) : column.fieldName === 'summary' ? (
                 <Input
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  placeholder="Type subtask title and press Enter..."
+                  placeholder="What needs to be done?"
                   className="h-7 text-xs"
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && newSubtaskTitle.trim()) {
                       onCreateInlineSubtask(task.id, task);
                     }
                     if (e.key === 'Escape') {

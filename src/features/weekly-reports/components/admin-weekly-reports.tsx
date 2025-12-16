@@ -5,6 +5,7 @@ import { format, parseISO, getISOWeek, getISOWeekYear, startOfISOWeek, endOfISOW
 import { Download, Filter, FileText, Calendar, Eye, ArrowLeft, Users } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -228,6 +229,11 @@ export function AdminWeeklyReports() {
       yPos = 20;
     }
     
+    console.log('[PDF Generation] Checking uploadedFiles...');
+    console.log('[PDF Generation] report.uploadedFiles:', report.uploadedFiles);
+    console.log('[PDF Generation] Type:', typeof report.uploadedFiles);
+    console.log('[PDF Generation] Is Array:', Array.isArray(report.uploadedFiles));
+    
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
@@ -235,12 +241,16 @@ export function AdminWeeklyReports() {
     yPos += 8;
     
     if (report.uploadedFiles && report.uploadedFiles.length > 0) {
-      const fileData = report.uploadedFiles.map((file: any, index: number) => [
-        (index + 1).toString(),
-        file.name || 'Unknown',
-        file.date ? format(parseISO(file.date), 'MMM dd, yyyy') : 'N/A',
-        file.size ? `${(file.size / 1024).toFixed(2)} KB` : 'N/A',
-      ]);
+      console.log('[PDF Generation] Found files:', report.uploadedFiles.length);
+      const fileData = report.uploadedFiles.map((file: any, index: number) => {
+        console.log('[PDF Generation] File', index, ':', file);
+        return [
+          (index + 1).toString(),
+          file.fileName || file.name || 'Unknown',
+          file.date ? format(parseISO(file.date), 'MMM dd, yyyy') : 'N/A',
+          file.fileSize ? `${(file.fileSize / 1024).toFixed(2)} KB` : file.size ? `${(file.size / 1024).toFixed(2)} KB` : 'N/A',
+        ];
+      });
       
       autoTable(doc, {
         startY: yPos,
@@ -318,6 +328,11 @@ export function AdminWeeklyReports() {
   };
   
   const handleViewReport = (report: any) => {
+    console.log('[Admin View] Full report data:', report);
+    console.log('[Admin View] uploadedFiles:', report.uploadedFiles);
+    console.log('[Admin View] uploadedFiles type:', typeof report.uploadedFiles);
+    console.log('[Admin View] uploadedFiles length:', report.uploadedFiles?.length);
+    
     setSelectedReport(report);
     
     const doc = generatePDF(report);
@@ -907,6 +922,66 @@ export function AdminWeeklyReports() {
               </div>
             )}
           </div>
+
+          {/* Uploaded Files Section */}
+          {selectedReport && selectedReport.uploadedFiles && selectedReport.uploadedFiles.length > 0 && (
+            <div className="mt-4 border rounded-lg p-4 bg-muted/10">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Uploaded Documents ({selectedReport.uploadedFiles.length})
+              </h3>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {selectedReport.uploadedFiles.map((file: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-background border rounded-md hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        <FileText className="h-5 w-5 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" title={file.fileName}>
+                          {file.fileName || 'Unknown File'}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          <span>
+                            {file.date ? format(parseISO(file.date), 'MMM dd, yyyy') : 'No date'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {file.fileSize ? `${(file.fileSize / 1024).toFixed(2)} KB` : 'Unknown size'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-shrink-0 ml-2"
+                      onClick={() => {
+                        if (file.fileUrl) {
+                          // Create a temporary link element to download the file
+                          const link = document.createElement('a');
+                          link.href = file.fileUrl;
+                          link.download = file.fileName || 'download';
+                          link.target = '_blank';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        } else {
+                          toast.error('File URL not available');
+                        }
+                      }}
+                      title="Download file"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={handleCloseDialog}>

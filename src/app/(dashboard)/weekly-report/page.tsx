@@ -40,7 +40,7 @@ export default async function WeeklyReportPage() {
           </p>
         </div>
 
-        <EmployeeWeeklyReportForm userDepartment={user.department || undefined} />
+        <EmployeeWeeklyReportForm userDepartment={user.department || ""} />
       </div>
     </div>
   );
