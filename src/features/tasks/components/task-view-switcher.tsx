@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderIcon, PlusIcon, XIcon } from "lucide-react";
+import { LoaderIcon, PlusIcon, XIcon, FolderIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useCallback, useState } from "react";
 
@@ -51,8 +51,8 @@ export const TaskViewSwitcher = ({
   // Fallback: Get first workspace if no workspaceId in route (for global tasks page)
   const { data: workspaces, isLoading: isLoadingWorkspaces } = useGetWorkspaces();
   
-  // Extract workspace ID - handle both array and documents format
-  const firstWorkspaceId = workspaces?.documents?.[0]?.id || workspaces?.[0]?.id;
+  // Extract workspace ID from documents array
+  const firstWorkspaceId = workspaces?.documents?.[0]?.id;
   const effectiveWorkspaceId = workspaceId || firstWorkspaceId;
 
   
@@ -88,7 +88,7 @@ export const TaskViewSwitcher = ({
   };
 
   const handleAddSubtask = (parentTaskId: string) => {
-    const parentTask = tasks?.documents.find((t: Task) => t.id === parentTaskId);
+    const parentTask = tasks?.documents.find((t: any) => t.id === parentTaskId);
     if (parentTask) {
       setParentTaskForSubtask(parentTask as Task);
       setIsSubtaskModalOpen(true);
@@ -142,12 +142,18 @@ export const TaskViewSwitcher = ({
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              {effectiveWorkspaceId || currentProjectId ? (
+              {!currentProjectId ? (
+                <div className="w-full border rounded-lg h-[200px] flex flex-col items-center justify-center gap-2">
+                  <FolderIcon className="size-8 text-muted-foreground" />
+                  <p className="text-muted-foreground text-center">
+                    Please select a project to view tasks
+                  </p>
+                </div>
+              ) : effectiveWorkspaceId ? (
                 <JiraTableDynamic 
                   key={currentProjectId || effectiveWorkspaceId}
                   data={(tasks?.documents ?? []) as Task[]}
-                  projectId={currentProjectId} // ✅ Project-specific columns
-                  workspaceId={effectiveWorkspaceId} // Fallback for backward compatibility
+                  workspaceId={effectiveWorkspaceId}
                   onAddSubtask={handleAddSubtask}
                 />
               ) : (
@@ -157,13 +163,31 @@ export const TaskViewSwitcher = ({
               )}
             </TabsContent>
             <TabsContent value="kanban" className="mt-0">
-              <DataKanban
-                data={(tasks?.documents ?? []) as Task[]}
-                onChange={onKanbanChange}
-              />
+              {!currentProjectId ? (
+                <div className="w-full border rounded-lg h-[200px] flex flex-col items-center justify-center gap-2">
+                  <FolderIcon className="size-8 text-muted-foreground" />
+                  <p className="text-muted-foreground text-center">
+                    Please select a project to view tasks
+                  </p>
+                </div>
+              ) : (
+                <DataKanban
+                  data={(tasks?.documents ?? []) as Task[]}
+                  onChange={onKanbanChange}
+                />
+              )}
             </TabsContent>
             <TabsContent value="calendar" className="mt-0 h-full pb-4">
-              <DataCalendar data={(tasks?.documents ?? []) as Task[]} />
+              {!currentProjectId ? (
+                <div className="w-full border rounded-lg h-[200px] flex flex-col items-center justify-center gap-2">
+                  <FolderIcon className="size-8 text-muted-foreground" />
+                  <p className="text-muted-foreground text-center">
+                    Please select a project to view tasks
+                  </p>
+                </div>
+              ) : (
+                <DataCalendar data={(tasks?.documents ?? []) as Task[]} />
+              )}
             </TabsContent>
           </>
         )}

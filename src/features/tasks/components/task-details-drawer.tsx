@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { MemberAvatar } from "@/features/members/components/member-avatar";
-import { User, Calendar, Tag, Flag, Clock, Plus, CheckCircle2, Circle, Activity as ActivityIcon } from "lucide-react";
+import { User, Calendar, Tag, Flag, Clock, Plus, CheckCircle2, Circle, Activity, UserCircle, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useCreateTask } from "../api/use-create-task";
 import { useUpdateTask } from "../api/use-update-task";
@@ -151,38 +151,68 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
       >
         <div className="flex h-full">
           {/* LEFT SIDE - Main Content */}
-          <div className="w-1/2 overflow-y-auto">
-            <div className="p-8 max-w-4xl">
-              {/* Header */}
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-                    ← Back
-                  </Button>
-                  <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{task.issueId}</span>
+          <div className="w-1/2 overflow-y-auto bg-background">
+            <div className="p-6">
+              {/* Breadcrumb Navigation */}
+              <div className="flex items-center gap-2 mb-4 text-sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => onOpenChange(false)}
+                  className="h-7 px-2 hover:bg-muted"
+                >
+                  ← Back to list
+                </Button>
+              </div>
+
+              {/* Issue Header with Type Badge */}
+              <div className="flex items-start gap-3 mb-6">
+                {task.issueType && (
+                  <Badge variant="outline" className="mt-1 text-xs font-medium">
+                    {task.issueType}
+                  </Badge>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-mono text-blue-600 dark:text-blue-400">
+                      {task.issueId}
+                    </span>
+                  </div>
+                  <h1 className="text-xl font-semibold text-foreground leading-tight">
+                    {task.summary}
+                  </h1>
                 </div>
-                <h1 className="text-2xl font-semibold mb-1">
-                  {task.summary}
-                </h1>
+              </div>
+
+              {/* Metadata Bar */}
+              <div className="flex items-center gap-4 pb-4 mb-6 border-b text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>Created by {task.creator?.name || 'Unknown'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>{formatDate(task.created)}</span>
+                </div>
               </div>
 
               {/* Description */}
               <div className="mb-8">
-                <h3 className="text-sm font-semibold mb-3">Description</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Description</h3>
                 {isAdmin && isEditingDescription ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Textarea
                       value={descriptionValue}
                       onChange={(e) => setDescriptionValue(e.target.value)}
                       placeholder="Add a description..."
-                      className="min-h-[120px] text-sm"
+                      className="min-h-[120px] text-sm resize-none"
                       autoFocus
                     />
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleUpdateDescription} disabled={updateTask.isPending}>
                         Save
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setIsEditingDescription(false)}>
+                      <Button size="sm" variant="outline" onClick={() => setIsEditingDescription(false)}>
                         Cancel
                       </Button>
                     </div>
@@ -190,8 +220,8 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                 ) : (
                   <div
                     className={cn(
-                      "text-sm text-muted-foreground p-3 rounded border min-h-[80px]",
-                      isAdmin && "cursor-pointer hover:bg-muted/50"
+                      "text-sm p-4 rounded-md border bg-muted/30 min-h-[100px]",
+                      isAdmin && "cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
                     )}
                     onClick={() => {
                       if (isAdmin) {
@@ -200,7 +230,11 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                       }
                     }}
                   >
-                    {task.description || (isAdmin ? "Add a description..." : "No description")}
+                    {task.description || (
+                      <span className="text-muted-foreground italic">
+                        {isAdmin ? "Click to add a description..." : "No description"}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -209,23 +243,27 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
               {subtasks.length > 0 && (
                 <div className="mb-8">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold">Subtasks</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="h-1.5 w-32 bg-muted rounded-full overflow-hidden">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Subtasks ({subtasks.filter(s => s.status === "Done").length}/{subtasks.length})
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-green-500 transition-all"
+                          className="h-full bg-green-500 transition-all duration-300"
                           style={{ width: `${completionPercentage}%` }}
                         />
                       </div>
-                      <span>{completionPercentage}% Done</span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {completionPercentage}%
+                      </span>
                     </div>
                   </div>
                   
                   {/* Subtasks Table */}
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden bg-card">
                     {/* Header */}
-                    <div className="grid grid-cols-[2fr,1fr,1.5fr,1fr] gap-4 px-4 py-2.5 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
-                      <div>Work</div>
+                    <div className="grid grid-cols-[2fr,1fr,1.5fr,1fr] gap-4 px-4 py-3 bg-muted/30 border-b text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <div>Task</div>
                       <div>Priority</div>
                       <div>Assignee</div>
                       <div>Status</div>
@@ -236,17 +274,17 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                       {subtasks.map((subtask) => (
                         <div
                           key={subtask.id}
-                          className="grid grid-cols-[2fr,1fr,1.5fr,1fr] gap-4 px-4 py-3 hover:bg-muted/30 transition-colors items-center"
+                          className="grid grid-cols-[2fr,1fr,1.5fr,1fr] gap-4 px-4 py-3.5 hover:bg-muted/20 transition-colors items-center"
                         >
                           {/* Work */}
                           <div className="flex items-center gap-2 min-w-0">
-                            {(isAdmin || subtask.assigneeId === currentUserId) ? (
+                            {isAdmin ? (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleSubtaskStatusToggle(subtask);
                                 }}
-                                className="flex-shrink-0"
+                                className="flex-shrink-0 hover:scale-110 transition-transform"
                               >
                                 {subtask.status === "Done" ? (
                                   <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -379,7 +417,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
 
                           {/* Status */}
                           <div>
-                            {isAdmin || subtask.assigneeId === currentUserId ? (
+                            {isAdmin ? (
                               <Select
                                 value={subtask.status}
                                 onValueChange={(value) => {
@@ -442,16 +480,17 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
           </div>
 
           {/* RIGHT SIDE - Details Panel */}
-          <div className="w-1/2 overflow-y-auto bg-muted/20">
+          <div className="w-1/2 overflow-y-auto bg-muted/10 border-l">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-base font-semibold">Details</h3>
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Details</h3>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {/* Assignee */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
                     Assignee
                   </label>
                   {isAdmin ? (
@@ -464,11 +503,11 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                         });
                       }}
                     >
-                      <SelectTrigger className="h-9 text-sm font-medium">
+                      <SelectTrigger className="h-10 text-sm font-medium border-0 bg-muted/50 hover:bg-muted">
                         <SelectValue>
                           {task.assignee ? (
-                            <div className="flex items-center gap-2">
-                              <MemberAvatar name={task.assignee.name} className="size-5" />
+                            <div className="flex items-center gap-2.5">
+                              <MemberAvatar name={task.assignee.name} className="size-6" />
                               <span>{task.assignee.name}</span>
                             </div>
                           ) : (
@@ -509,8 +548,9 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                 </div>
 
                 {/* Priority */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <Flag className="h-3.5 w-3.5" />
                     Priority
                   </label>
                   {isAdmin ? (
@@ -523,24 +563,51 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                         });
                       }}
                     >
-                      <SelectTrigger className="h-9 text-sm font-medium">
+                      <SelectTrigger className="h-10 text-sm font-medium border-0 bg-muted/50 hover:bg-muted">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Low">Low</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="High">High</SelectItem>
-                        <SelectItem value="Critical">Critical</SelectItem>
+                        <SelectItem value="Low">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">Low</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="Medium">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-yellow-500 text-yellow-700 bg-yellow-50">Medium</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="High">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-orange-500 text-orange-700 bg-orange-50">High</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="Critical">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-red-500 text-red-700 bg-red-50">Critical</Badge>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="text-sm font-medium">{task.priority || "Medium"}</div>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-sm font-medium ${
+                        task.priority === "Critical" ? "border-red-500 text-red-700 bg-red-50" :
+                        task.priority === "High" ? "border-orange-500 text-orange-700 bg-orange-50" :
+                        task.priority === "Low" ? "border-blue-500 text-blue-700 bg-blue-50" :
+                        "border-yellow-500 text-yellow-700 bg-yellow-50"
+                      }`}
+                    >
+                      {task.priority || "Medium"}
+                    </Badge>
                   )}
                 </div>
 
                 {/* Status */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <Activity className="h-3.5 w-3.5" />
                     Status
                   </label>
                   {isAdmin ? (
@@ -553,17 +620,32 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                         });
                       }}
                     >
-                      <SelectTrigger className="h-9 text-sm font-medium">
+                      <SelectTrigger className="h-10 text-sm font-medium border-0 bg-muted/50 hover:bg-muted">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="To Do">TO DO</SelectItem>
-                        <SelectItem value="In Progress">IN PROGRESS</SelectItem>
-                        <SelectItem value="Done">DONE</SelectItem>
+                        <SelectItem value="To Do">
+                          <Badge variant="outline" className="border-gray-500 text-gray-700 bg-gray-50">TO DO</Badge>
+                        </SelectItem>
+                        <SelectItem value="In Progress">
+                          <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">IN PROGRESS</Badge>
+                        </SelectItem>
+                        <SelectItem value="Done">
+                          <Badge variant="outline" className="border-green-500 text-green-700 bg-green-50">DONE</Badge>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="text-sm font-medium">{task.status}</div>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-sm font-medium ${
+                        task.status === "Done" ? "border-green-500 text-green-700 bg-green-50" :
+                        task.status === "In Progress" ? "border-blue-500 text-blue-700 bg-blue-50" :
+                        "border-gray-500 text-gray-700 bg-gray-50"
+                      }`}
+                    >
+                      {task.status}
+                    </Badge>
                   )}
                 </div>
 
@@ -604,8 +686,9 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                 </div>
 
                 {/* Due date */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
                     Due date
                   </label>
                   {isAdmin && isEditingDueDate ? (
@@ -614,7 +697,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                         type="date"
                         value={dueDateValue}
                         onChange={(e) => setDueDateValue(e.target.value)}
-                        className="h-9 text-sm"
+                        className="h-10 text-sm border-0 bg-muted/50"
                         autoFocus
                         onBlur={() => {
                           if (dueDateValue) {
@@ -633,8 +716,8 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                   ) : (
                     <div 
                       className={cn(
-                        "flex items-center gap-3 text-sm p-2 rounded",
-                        isAdmin && "cursor-pointer hover:bg-accent"
+                        "flex items-center gap-3 text-sm p-2.5 rounded-md border-0",
+                        isAdmin && "cursor-pointer hover:bg-muted/50 bg-muted/20"
                       )}
                       onClick={() => {
                         if (isAdmin) {
@@ -653,8 +736,9 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                 </div>
 
                 {/* Labels */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5" />
                     Labels
                   </label>
                   {isAdmin ? (
@@ -664,7 +748,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                           value={labelsValue}
                           onChange={(e) => setLabelsValue(e.target.value)}
                           placeholder="Enter labels separated by commas"
-                          className="text-sm"
+                          className="text-sm border-0 bg-muted/50"
                           autoFocus
                         />
                         <div className="flex gap-2">
@@ -692,7 +776,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                       </div>
                     ) : (
                       <div
-                        className="cursor-pointer hover:bg-muted/50 rounded p-2 -ml-2"
+                        className="cursor-pointer hover:bg-muted/50 rounded-md p-2.5 -ml-2.5 border-0 bg-muted/20"
                         onClick={() => {
                           const currentLabels = task.labels && Array.isArray(task.labels) ? task.labels.join(', ') : '';
                           setLabelsValue(currentLabels);
@@ -702,7 +786,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                         {task.labels && Array.isArray(task.labels) && task.labels.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {task.labels.map((label, index) => (
-                              <Badge key={index} variant="outline" className="text-xs px-2 py-1">
+                              <Badge key={index} variant="secondary" className="text-xs px-2.5 py-1">
                                 {label}
                               </Badge>
                             ))}
@@ -728,16 +812,17 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                   )}
                 </div>
 
-                <Separator className="my-4" />
+                <Separator className="my-2" />
 
                 {/* Reporter */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <UserCircle className="h-3.5 w-3.5" />
                     Reporter
                   </label>
                   {task.reporter ? (
                     <div className="flex items-center gap-3">
-                      <MemberAvatar name={task.reporter.name} className="size-7" />
+                      <MemberAvatar name={task.reporter.name} className="size-8" />
                       <span className="text-sm font-medium">{task.reporter.name}</span>
                     </div>
                   ) : (
@@ -746,12 +831,12 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                 </div>
 
                 {/* Created */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                <div className="bg-card rounded-lg p-4 border shadow-sm">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
                     Created
                   </label>
                   <div className="flex items-center gap-3 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{formatDate(task.created)}</span>
                   </div>
                 </div>
@@ -759,9 +844,10 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                 {/* Custom Fields - Show all additional fields from CSV imports */}
                 {task.customFields && typeof task.customFields === 'object' && Object.keys(task.customFields).length > 0 && (
                   <>
-                    <Separator className="my-4" />
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3">
+                    <Separator className="my-2" />
+                    <div className="bg-card rounded-lg p-4 border shadow-sm">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-3 flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5" />
                         Additional Details
                       </label>
                       <div className="space-y-3">

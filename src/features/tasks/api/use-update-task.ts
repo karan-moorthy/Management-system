@@ -31,36 +31,32 @@ export const useUpdateTask = () => {
     onSuccess: ({ data }) => {
       toast.success("Task updated.");
       
-      // Optimized: Update cache directly instead of invalidating everything
-      queryClient.setQueryData(["task", data.id], { data });
+      // Invalidate all task-related queries to ensure UI updates
+      queryClient.invalidateQueries({ 
+        queryKey: ["tasks"],
+      });
       
-      // Selectively update task lists that contain this task
-      queryClient.setQueriesData(
-        { queryKey: ["tasks"], exact: false },
-        (old: any) => {
-          if (!old?.documents) return old;
-          return {
-            ...old,
-            documents: old.documents.map((task: any) =>
-              task.id === data.id ? data : task
-            )
-          };
-        }
-      );
+      // Invalidate specific task query
+      queryClient.invalidateQueries({ 
+        queryKey: ["task", data.id],
+      });
       
-      // Only invalidate analytics for affected workspace/project
+      // Invalidate analytics
       if (data.projectId) {
         queryClient.invalidateQueries({ 
           queryKey: ["project-analytics", data.projectId],
-          exact: true 
         });
       }
       if (data.workspaceId) {
         queryClient.invalidateQueries({ 
           queryKey: ["workspace-analytics", data.workspaceId],
-          exact: true
         });
       }
+      
+      // Invalidate activity logs to show recent changes
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
     },
     onError: () => {
       toast.error("Failed to update task.");
