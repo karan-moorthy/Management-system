@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format, parseISO, getISOWeek, getISOWeekYear, startOfISOWeek, endOfISOWeek } from "date-fns";
-import { Download, Filter, FileText, Calendar, Eye, ArrowLeft, Users } from "lucide-react";
+import { Download, Filter, FileText, Calendar, Eye, ArrowLeft, Users, ChevronDown } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
@@ -41,6 +41,9 @@ export function AdminWeeklyReports() {
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
+  const [showUploadedFiles, setShowUploadedFiles] = useState(true);
+  const [previewFile, setPreviewFile] = useState<any>(null);
+  const [showFilePreview, setShowFilePreview] = useState(false);
   
   const { data: reports, isLoading } = useGetWeeklyReports({
     department: selectedDepartment || undefined,
@@ -267,12 +270,25 @@ export function AdminWeeklyReports() {
           fontSize: 9,
         },
         columnStyles: {
-          0: { cellWidth: 15, halign: 'center' },
-          1: { cellWidth: 80 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 30, halign: 'right' },
+          0: { cellWidth: 12, halign: 'center' },
+          1: { cellWidth: 90, textColor: [59, 130, 246] }, // Blue color for clickable file names
+          2: { cellWidth: 35 },
+          3: { cellWidth: 25, halign: 'right' },
         },
         margin: { left: 14, right: 14 },
+        didDrawCell: (data: any) => {
+          // Make file names clickable (column index 1)
+          if (data.section === 'body' && data.column.index === 1) {
+            const fileIndex = data.row.index;
+            const file = report.uploadedFiles[fileIndex];
+            if (file && file.fileUrl) {
+              // Add clickable link area over the cell
+              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                url: file.fileUrl
+              });
+            }
+          }
+        }
       });
     } else {
       doc.setFontSize(10);
@@ -369,6 +385,7 @@ export function AdminWeeklyReports() {
     setShowDownloadDialog(false);
     setSelectedReport(null);
     setPdfDataUrl(null);
+    setShowUploadedFiles(false);
   };
   
   const handleDownloadAllCSV = () => {
@@ -925,61 +942,84 @@ export function AdminWeeklyReports() {
 
           {/* Uploaded Files Section */}
           {selectedReport && selectedReport.uploadedFiles && selectedReport.uploadedFiles.length > 0 && (
-            <div className="mt-4 border rounded-lg p-4 bg-muted/10">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Uploaded Documents ({selectedReport.uploadedFiles.length})
-              </h3>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {selectedReport.uploadedFiles.map((file: any, index: number) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-background border rounded-md hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0">
-                        <FileText className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" title={file.fileName}>
-                          {file.fileName || 'Unknown File'}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <span>
-                            {file.date ? format(parseISO(file.date), 'MMM dd, yyyy') : 'No date'}
-                          </span>
-                          <span>•</span>
-                          <span>
-                            {file.fileSize ? `${(file.fileSize / 1024).toFixed(2)} KB` : 'Unknown size'}
-                          </span>
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Uploaded Documents ({selectedReport.uploadedFiles.length})
+                </h3>
+                <p className="text-xs text-muted-foreground italic">Click file names to open</p>
+              </div>
+              <div className="border rounded-lg p-4 bg-muted/10">
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {selectedReport.uploadedFiles.map((file: any, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-background border rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" title={file.fileName}>
+                              {file.fileName || 'Unknown File'}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                              <span>
+                                {file.date ? format(parseISO(file.date), 'MMM dd, yyyy') : 'No date'}
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {file.fileSize ? `${(file.fileSize / 1024).toFixed(2)} KB` : 'Unknown size'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (file?.fileUrl) {
+                                setPreviewFile(file);
+                                setShowFilePreview(true);
+                              } else {
+                                toast.error('File URL not available');
+                              }
+                            }}
+                            title="View file"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (file.fileUrl) {
+                                // Create a temporary link element to download the file
+                                const link = document.createElement('a');
+                                link.href = file.fileUrl;
+                                link.download = file.fileName || 'download';
+                                link.target = '_blank';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              } else {
+                                toast.error('File URL not available');
+                              }
+                            }}
+                            title="Download file"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-shrink-0 ml-2"
-                      onClick={() => {
-                        if (file.fileUrl) {
-                          // Create a temporary link element to download the file
-                          const link = document.createElement('a');
-                          link.href = file.fileUrl;
-                          link.download = file.fileName || 'download';
-                          link.target = '_blank';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        } else {
-                          toast.error('File URL not available');
-                        }
-                      }}
-                      title="Download file"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
             </div>
           )}
           
@@ -993,6 +1033,65 @@ export function AdminWeeklyReports() {
             >
               <Download className="h-4 w-4" />
               Download PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Preview Dialog */}
+      <Dialog open={showFilePreview} onOpenChange={setShowFilePreview}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              File Preview
+            </DialogTitle>
+            <DialogDescription>
+              {previewFile && (
+                <span>{previewFile.fileName} • {previewFile.fileSize ? `${(previewFile.fileSize / 1024).toFixed(2)} KB` : 'Unknown size'}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-auto border rounded-lg bg-muted/20 min-h-[500px]">
+            {previewFile?.fileUrl ? (
+              <iframe
+                src={previewFile.fileUrl}
+                className="w-full h-full min-h-[500px]"
+                title="File Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">Loading preview...</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowFilePreview(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (previewFile?.fileUrl) {
+                  const link = document.createElement('a');
+                  link.href = previewFile.fileUrl;
+                  link.download = previewFile.fileName || 'download';
+                  link.target = '_blank';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } else {
+                  toast.error('File URL not available');
+                }
+              }}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download
             </Button>
           </DialogFooter>
         </DialogContent>
