@@ -80,11 +80,12 @@ export const UserButton = () => {
           <User className="size-4 mr-2" />
           Profile
         </DropdownMenuItem>
-        <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-          <Palette className="size-4 mr-2" />
-          <span className="flex-1">Theme</span>
+        <DropdownMenuItem 
+          className="h-10 flex items-center cursor-pointer p-0"
+          onSelect={(e) => e.preventDefault()}
+        >
           <ModeToggle inline />
-        </div>
+        </DropdownMenuItem>
         <DropdownMenuItem className="h-10 flex items-center cursor-pointer">
           <Settings className="size-4 mr-2" />
           Settings

@@ -508,45 +508,98 @@ export const JiraDashboard = () => {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Status Overview */}
-            <Card className="bg-card border">
-              <CardHeader>
-                <CardTitle className="text-lg">Status overview</CardTitle>
-                <CardDescription>
+            {/* Status Overview - Enhanced */}
+            <Card className="bg-gradient-to-br from-card to-card/50 border shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="space-y-2 pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                    Status Overview
+                  </CardTitle>
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <CheckCircle2 className="size-5 text-primary" />
+                  </div>
+                </div>
+                <CardDescription className="text-sm">
                   Get an overview of the status of your work items.{" "}
-                  <a href="#" className="text-primary hover:underline">View all work items</a>
+                  <a href="#" className="text-primary hover:underline font-medium transition-colors">View all work items</a>
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <div className="flex flex-col md:flex-row items-center gap-8">
-                  <div className="relative w-48 h-48 flex-shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-3xl font-bold">{totalWorkItems}</p>
-                  <p className="text-xs text-muted-foreground">Total work item...</p>
-                </div>
-              </div>
-                  <div className="space-y-3 flex-1">
+                  {/* Enhanced Donut Chart */}
+                  <div className="relative w-52 h-52 flex-shrink-0 group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                          strokeWidth={2}
+                          className="drop-shadow-lg"
+                        >
+                          {statusData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.color}
+                              className="hover:opacity-80 transition-opacity cursor-pointer"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--popover))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06)',
+                            color: 'hsl(var(--popover-foreground))',
+                            fontSize: '14px'
+                          }}
+                          itemStyle={{
+                            color: 'hsl(var(--popover-foreground))',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                          formatter={(value: any) => {
+                            const percentage = totalWorkItems > 0 ? Math.round((Number(value) / totalWorkItems) * 100) : 0;
+                            return `${value} tasks (${percentage}%)`;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <p className="text-4xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        {totalWorkItems}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">Total work items</p>
+                    </div>
+                  </div>
+                  
+                  {/* Enhanced Status Legend */}
+                  <div className="space-y-3 flex-1 w-full">
                     {statusData.map((item, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm">{item.name}: {item.value}</span>
+                      <div 
+                        key={index} 
+                        className="group flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-200 cursor-pointer border border-transparent hover:border-border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-4 h-4 rounded-md shadow-sm group-hover:scale-110 transition-transform" 
+                            style={{ backgroundColor: item.color }} 
+                          />
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold">{item.value}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {totalWorkItems > 0 ? Math.round((item.value / totalWorkItems) * 100) : 0}%
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
