@@ -112,7 +112,7 @@ export const SprintBurndownClient = () => {
               <div>
                 <h1 className="text-2xl font-semibold">Sprint Burndown Chart</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Track work remaining in the sprin
+                  Track work remaining in the sprint
                 </p>
               </div>
             </div>
