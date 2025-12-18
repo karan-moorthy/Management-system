@@ -22,6 +22,8 @@ import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { useGetMembers } from "@/features/members/api/use-get-members";
 import { useIsGlobalAdmin } from "@/features/members/api/use-get-user-role";
 import { Task, TaskStatus, TaskPriority } from "@/features/tasks/types";
+import { ActivityTimeline } from "@/features/activity/components/activity-timeline";
+import { useGetActivityLogs } from "@/features/activity/api/use-get-activity-logs";
 import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
 import {
   Select,
@@ -48,6 +50,11 @@ const PRIORITY_COLORS = {
 export const JiraDashboard = () => {
   const { data: isAdmin } = useIsGlobalAdmin();
   const [selectedProject, setSelectedProject] = useState<string>("all");
+  
+  // Fetch real activity logs from database
+  const { data: activityData, isLoading: isLoadingActivity } = useGetActivityLogs({
+    limit: 50,
+  });
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedAssignee, setSelectedAssignee] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -307,174 +314,7 @@ export const JiraDashboard = () => {
   const inProgressPercentage = totalWorkItems > 0 ? Math.round((inProgressTasks / totalWorkItems) * 100) : 0;
   const todoPercentage = totalWorkItems > 0 ? Math.round((todoTasks / totalWorkItems) * 100) : 0;
 
-  // Create detailed activity timeline
-  // Recent Activity Data Basis:
-  // 1. Created events: Generated from task.created timestamp when a task was first created
-  // 2. Updated events: Generated from task.updated timestamp (only if different from created)
-  // 3. Activities are based on FILTERED tasks (respects Project, Status, Assignee filters)
-  // 4. Sorted by timestamp in descending order (newest first)
-  // 5. Grouped by date: Today, Yesterday, or specific date (e.g., "November 17, 2025")
-  // 6. Limited to 3 date groups, each showing up to 10 activities
-  interface Activity {
-    id: string;
-    type: 'created' | 'updated' | 'status_changed';
-    task: Task;
-    timestamp: Date;
-    oldValue?: string;
-    newValue?: string;
-  }
-
-  const activities: Activity[] = useMemo(() => {
-    const activityList: Activity[] = [];
-    
-    // Use filtered tasks instead of allTasks
-    tasks.forEach((task) => {
-      // Parse created timestamp safely - task.created is a string from the database
-      const createdTimestamp = new Date(task.created);
-      
-      // Debug: Log the first task's timestamp info
-      if (activityList.length === 0 && tasks.length > 0) {
-        console.log('🕐 Timestamp Debug:', {
-          rawCreated: task.created,
-          parsedCreated: createdTimestamp,
-          createdISO: createdTimestamp.toISOString(),
-          currentTime: new Date(),
-          currentISO: new Date().toISOString(),
-          timeDiffMinutes: Math.round((new Date().getTime() - createdTimestamp.getTime()) / 1000 / 60),
-          formatResult: formatDistanceToNow(createdTimestamp, { addSuffix: true })
-        });
-      }
-      
-      // Only add if timestamp is valid
-      if (!isNaN(createdTimestamp.getTime())) {
-        // Created activity
-        activityList.push({
-          id: `${task.id}-created`,
-          type: 'created',
-          task,
-          timestamp: createdTimestamp,
-        });
-      }
-
-      // Updated activity (if updated is different from created)
-      if (task.updated && task.updated !== task.created) {
-        const updatedTimestamp = new Date(task.updated);
-          
-        if (!isNaN(updatedTimestamp.getTime())) {
-          activityList.push({
-            id: `${task.id}-updated`,
-            type: 'updated',
-            task,
-            timestamp: updatedTimestamp,
-            newValue: task.status,
-          });
-        }
-      }
-    });
-
-    // Sort by timestamp descending
-    return activityList.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [tasks]); // Changed dependency from allTasks to tasks
-
-  // Group activities by date - limit to recent activities for performance
-  const groupedActivities = useMemo(() => {
-    const groups: { [key: string]: Activity[] } = {};
-    
-    // Only process the most recent 100 activities for performance
-    const recentActivities = activities.slice(0, 100);
-    
-    recentActivities.forEach((activity) => {
-      let groupKey: string;
-      
-      if (isToday(activity.timestamp)) {
-        groupKey = 'Today';
-      } else if (isYesterday(activity.timestamp)) {
-        groupKey = 'Yesterday';
-      } else {
-        groupKey = format(activity.timestamp, 'MMMM d, yyyy');
-      }
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(activity);
-    });
-    
-    return groups;
-  }, [activities]);
-
-  const getStatusBadgeColor = (status: TaskStatus) => {
-    switch (status) {
-      case TaskStatus.TODO:
-        return "bg-[hsl(var(--status-todo-bg))]/10 text-[hsl(var(--status-todo))] border-[hsl(var(--status-todo-border))]/30";
-      case TaskStatus.IN_PROGRESS:
-        return "bg-[hsl(var(--status-in-progress-bg))]/10 text-[hsl(var(--status-in-progress))] border-[hsl(var(--status-in-progress-border))]/30";
-      case TaskStatus.IN_REVIEW:
-        return "bg-[hsl(var(--status-in-review-bg))]/10 text-[hsl(var(--status-in-review))] border-[hsl(var(--status-in-review-border))]/30";
-      case TaskStatus.DONE:
-        return "bg-[hsl(var(--status-done-bg))]/10 text-[hsl(var(--status-done))] border-[hsl(var(--status-done-border))]/30";
-      case TaskStatus.BACKLOG:
-        return "bg-[hsl(var(--status-backlog-bg))]/10 text-[hsl(var(--status-backlog))] border-[hsl(var(--status-backlog-border))]/30";
-      default:
-        return "bg-[hsl(var(--status-backlog-bg))]/10 text-[hsl(var(--status-backlog))] border-[hsl(var(--status-backlog-border))]/30";
-    }
-  };
-
-  const getActivityIcon = (type: Activity['type']) => {
-    switch (type) {
-      case 'created':
-        return <PlusSquare className="size-4 text-blue-500" />;
-      case 'updated':
-        return <Edit className="size-4 text-purple-500" />;
-      case 'status_changed':
-        return <RefreshCw className="size-4 text-amber-500" />;
-      default:
-        return <Clock className="size-4" />;
-    }
-  };
-
-  const getActivityText = (activity: Activity) => {
-    const taskName = activity.task.issueId || activity.task.summary || 'Task';
-    const assigneeName = activity.task.assignee?.name || 'User';
-    
-    switch (activity.type) {
-      case 'created':
-        return (
-          <>
-            <span className="font-medium">{assigneeName}</span> created{" "}
-            <a href={`/tasks/${activity.task.id}`} className="text-primary hover:underline font-medium">
-              {taskName}
-            </a>
-          </>
-        );
-      case 'updated':
-        return (
-          <>
-            <span className="font-medium">{assigneeName}</span> updated{" "}
-            <a href={`/tasks/${activity.task.id}`} className="text-primary hover:underline font-medium">
-              {taskName}
-            </a>
-            {activity.newValue && (
-              <>
-                {" "}to{" "}
-                <Badge variant="outline" className={getStatusBadgeColor(activity.newValue as TaskStatus)}>
-                  {activity.newValue}
-                </Badge>
-              </>
-            )}
-          </>
-        );
-      default:
-        return (
-          <>
-            <span className="font-medium">{assigneeName}</span> modified{" "}
-            <a href={`/tasks/${activity.task.id}`} className="text-primary hover:underline font-medium">
-              {taskName}
-            </a>
-          </>
-        );
-    }
-  };
+  // Activity tracking now uses real activity_logs table data via ActivityTimeline component
 
   return (
     <div className="w-full space-y-4">
@@ -714,57 +554,13 @@ export const JiraDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Recent Activity - Shows task creation & updates from filtered tasks, sorted by timestamp */}
-            <Card className="bg-card border">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Recent activity</CardTitle>
-                    <CardDescription>
-                      Task creations and updates for existing tasks. Deleted tasks are not shown.
-                    </CardDescription>
-                  </div>
-              <Button variant="ghost" size="icon">
-                <Maximize2 className="size-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-              {Object.entries(groupedActivities).slice(0, 3).map(([dateKey, dateActivities]) => (
-                <div key={dateKey} className="space-y-2">
-                  <div className="text-sm font-semibold flex items-center gap-2 sticky top-0 bg-card py-2">
-                    <Clock className="size-4" />
-                    {dateKey}
-                  </div>
-                  <div className="space-y-3">
-                    {dateActivities.slice(0, 10).map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-3 text-sm py-2 border-b last:border-0">
-                        <div className="p-1.5 rounded-full bg-muted">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-muted-foreground leading-relaxed">
-                            {getActivityText(activity)}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {Object.keys(groupedActivities).length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="size-8 mx-auto mb-2 opacity-50" />
-                  <p>No recent activity</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            {/* Recent Activity - Jira-style Activity Tracking from activity_logs table */}
+            <ActivityTimeline
+              activities={activityData?.documents || []}
+              isLoading={isLoadingActivity}
+              showGrouping={true}
+              maxHeight="400px"
+            />
 
             {/* Priority Breakdown */}
             <Card className="bg-card border">
