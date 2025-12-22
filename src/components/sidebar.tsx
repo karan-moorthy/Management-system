@@ -25,6 +25,8 @@ import { GoHome, GoHomeFill, GoCheckCircle, GoCheckCircleFill } from "react-icon
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useIsGlobalAdmin } from "@/features/members/api/use-get-user-role";
+import { usePermissionContext } from "@/components/providers/permission-provider";
+import { MemberRole } from "@/features/members/types";
 
 import { DottedSeparator } from "./dotted-separator";
 import { CollapsibleSection } from "./collapsible-section";
@@ -32,6 +34,7 @@ import { CollapsibleSection } from "./collapsible-section";
 export const Sidebar = () => {
   const pathname = usePathname();
   const { data: isAdmin, isLoading } = useIsGlobalAdmin();
+  const { role } = usePermissionContext();
   const [expandedSections, setExpandedSections] = useState<string[]>(["Home", "Projects"]);
   const [mounted, setMounted] = useState(false);
 
@@ -143,7 +146,7 @@ export const Sidebar = () => {
         </button>
         {expandedSections.includes("Projects") && (
           <nav className="flex flex-col gap-1 ml-4 mt-1">
-            {mounted && isAdmin && (
+            {mounted && isAdmin && role !== MemberRole.CLIENT && (
               <>
                 <Link
                   href="/add-requirements"
@@ -177,36 +180,41 @@ export const Sidebar = () => {
               <GoalIcon className="size-4" />
               Add Tasks
             </Link>
-            <Link
-              href="/bugs"
-              className={cn(
-                "flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground",
-                pathname === "/bugs" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
-              )}
-            >
-              <Bug className="size-4" />
-              Bug Tracker
-            </Link>
-            <Link
-              href="/summary"
-              className={cn(
-                "flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground",
-                pathname === "/summary" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
-              )}
-            >
-              <FileCheck className="size-4" />
-              Summary
-            </Link>
+            {role !== MemberRole.CLIENT && (
+              <>
+                <Link
+                  href="/bugs"
+                  className={cn(
+                    "flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground",
+                    pathname === "/bugs" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
+                  )}
+                >
+                  <Bug className="size-4" />
+                  Bug Tracker
+                </Link>
+                <Link
+                  href="/summary"
+                  className={cn(
+                    "flex items-center gap-2.5 p-2.5 rounded-md font-medium hover:text-primary transition text-muted-foreground",
+                    pathname === "/summary" && "bg-background dark:bg-background shadow-sm text-primary border border-border"
+                  )}
+                >
+                  <FileCheck className="size-4" />
+                  Summary
+                </Link>
+              </>
+            )}
           </nav>
         )}
       </div>
 
       {/* ATTENDANCE Section */}
-      <CollapsibleSection 
-        title="Attendance" 
-        icon={<Clock className="size-4" />}
-        defaultOpen={false}
-      >
+      {role !== MemberRole.CLIENT && (
+        <CollapsibleSection 
+          title="Attendance" 
+          icon={<Clock className="size-4" />}
+          defaultOpen={false}
+        >
         <nav className="flex flex-col gap-1 px-3">
           <Link
             href="/attendance"
@@ -234,14 +242,16 @@ export const Sidebar = () => {
             </Link>
           )}
         </nav>
-      </CollapsibleSection>
+        </CollapsibleSection>
+      )}
 
       {/* Solutions Section */}
-      <CollapsibleSection 
-        title="Solutions" 
-        icon={<Lightbulb className="size-4" />}
-        defaultOpen={false}
-      >
+      {role !== MemberRole.CLIENT && (
+        <CollapsibleSection 
+          title="Solutions" 
+          icon={<Lightbulb className="size-4" />}
+          defaultOpen={false}
+        >
         <nav className="flex flex-col gap-1 px-3">
           <Link
             href="/solutions/pdf-xml"
@@ -272,7 +282,8 @@ export const Sidebar = () => {
             Similarity Checkers
           </Link>
         </nav>
-      </CollapsibleSection>
+        </CollapsibleSection>
+      )}
 
     </aside>
   );

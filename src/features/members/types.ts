@@ -5,6 +5,7 @@ export enum MemberRole {
   TEAM_LEAD = "TEAM_LEAD",
   EMPLOYEE = "EMPLOYEE",
   MANAGEMENT = "MANAGEMENT",
+  CLIENT = "CLIENT", // View-only access to specific project
 }
 
 export type Member = {
@@ -16,4 +17,5 @@ export type Member = {
   updatedAt: string;
   name: string;
   email: string;
+  projectId?: string | null; // For CLIENT role - scoped to specific project
 };

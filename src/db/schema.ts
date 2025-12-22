@@ -77,12 +77,14 @@ export const members = pgTable('members', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }), // For CLIENT role - scoped to specific project
   role: text('role').notNull().default('MEMBER'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   userIdx: index('members_user_idx').on(table.userId),
   workspaceIdx: index('members_workspace_idx').on(table.workspaceId),
+  projectIdx: index('members_project_idx').on(table.projectId),
   userWorkspaceIdx: index('members_user_workspace_idx').on(table.userId, table.workspaceId),
 }));
 
@@ -647,4 +649,24 @@ export const listViewColumns = pgTable('list_view_columns', {
   workspaceIdx: index('list_view_columns_workspace_idx').on(table.workspaceId),
   projectIdx: index('list_view_columns_project_idx').on(table.projectId),
   projectPositionIdx: index('list_view_columns_project_position_idx').on(table.projectId, table.position),
+}));
+
+// Client Invitations table - For inviting external clients to view specific projects
+export const clientInvitations = pgTable('client_invitations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').notNull(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  invitedBy: uuid('invited_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  status: text('status').notNull().default('pending'), // pending, accepted, expired, revoked
+  expiresAt: timestamp('expires_at').notNull(),
+  acceptedAt: timestamp('accepted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  emailIdx: index('client_invitations_email_idx').on(table.email),
+  projectIdx: index('client_invitations_project_idx').on(table.projectId),
+  tokenIdx: index('client_invitations_token_idx').on(table.token),
+  statusIdx: index('client_invitations_status_idx').on(table.status),
 }));

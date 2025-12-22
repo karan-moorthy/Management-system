@@ -68,9 +68,13 @@ export function PermissionProvider({
         return [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER].includes(role);
       
       case "COMMENT":
+        // CLIENT can comment, MANAGEMENT cannot
+        if (role === MemberRole.CLIENT) return true;
         return role !== MemberRole.MANAGEMENT;
       
       case "VIEW_ALL_TASKS":
+        // CLIENT cannot view all tasks (only their assigned project)
+        if (role === MemberRole.CLIENT) return false;
         return role !== MemberRole.MANAGEMENT;
       
       case "ACCESS_DASHBOARD":
@@ -82,6 +86,8 @@ export function PermissionProvider({
   };
 
   const canCreateTask = (projectId?: string): boolean => {
+    // CLIENT cannot create tasks (read-only)
+    if (role === MemberRole.CLIENT) return false;
     if (role === MemberRole.MANAGEMENT) return false;
     if (role === MemberRole.EMPLOYEE) {
       return projectId ? userProjects.includes(projectId) : false;
@@ -96,6 +102,12 @@ export function PermissionProvider({
       taskOwnerId,
       isAdmin: [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER].includes(role)
     });
+    
+    // CLIENT cannot edit tasks (read-only)
+    if (role === MemberRole.CLIENT) {
+      console.log('[Permission Check] CLIENT - read only');
+      return false;
+    }
     
     // Admin and Project Manager can edit all tasks
     if ([MemberRole.ADMIN, MemberRole.PROJECT_MANAGER].includes(role)) {
@@ -116,6 +128,9 @@ export function PermissionProvider({
   };
 
   const canChangeStatus = (taskOwnerId?: string): boolean => {
+    // CLIENT cannot change status (read-only)
+    if (role === MemberRole.CLIENT) return false;
+    
     // Admin and Project Manager can change status on all tasks
     if ([MemberRole.ADMIN, MemberRole.PROJECT_MANAGER].includes(role)) {
       return true;
@@ -129,6 +144,9 @@ export function PermissionProvider({
   };
 
   const canDeleteTask = (taskOwnerId?: string, taskProjectId?: string | null): boolean => {
+    // CLIENT cannot delete tasks (read-only)
+    if (role === MemberRole.CLIENT) return false;
+    
     // Admin and Project Manager can delete all tasks
     if (role === MemberRole.ADMIN || role === MemberRole.PROJECT_MANAGER) {
       return true;

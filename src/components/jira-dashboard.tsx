@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,7 +14,8 @@ import {
   Maximize2,
   Clock,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  UserPlus
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { useGetTasks } from "@/features/tasks/api/use-get-tasks";
@@ -32,6 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InviteClientModal } from "@/features/clients/components/invite-client-modal";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 
 const STATUS_COLORS = {
   [TaskStatus.TODO]: "#10b981",
@@ -49,7 +52,9 @@ const PRIORITY_COLORS = {
 
 export const JiraDashboard = () => {
   const { data: isAdmin } = useIsGlobalAdmin();
-  const [selectedProject, setSelectedProject] = useState<string>("all");
+  const { canManageUsers } = usePermissionContext();
+  const [selectedProject, setSelectedProject] = useState<string>("");
+  const [isInviteClientModalOpen, setIsInviteClientModalOpen] = useState(false);
   
   // Fetch real activity logs from database
   const { data: activityData, isLoading: isLoadingActivity } = useGetActivityLogs({
@@ -70,6 +75,14 @@ export const JiraDashboard = () => {
   const allTasks = (tasksData?.documents as Task[]) || [];
   const projects = (projectsData?.documents || []) as any[];
   const members = (membersData?.documents || []) as any[];
+
+  // Auto-select first project when projects load
+  useEffect(() => {
+    if (projects.length > 0 && !selectedProject) {
+      setSelectedProject(projects[0].id);
+      console.log("Auto-selected first project:", projects[0].name);
+    }
+  }, [projects, selectedProject]);
 
   // Debug: Log task statuses to see what values we're getting
   if (allTasks.length > 0 && allTasks.length <= 5) {
@@ -96,7 +109,8 @@ export const JiraDashboard = () => {
     
     console.log("Starting filter with", filtered.length, "tasks");
     
-    if (selectedProject !== "all") {
+    // Always filter by project - no 'all projects' option
+    if (selectedProject) {
       const beforeCount = filtered.length;
       filtered = filtered.filter((task) => task.projectId === selectedProject);
       console.log(`Project filter: ${beforeCount} -> ${filtered.length} (looking for projectId: ${selectedProject})`);
@@ -330,10 +344,9 @@ export const JiraDashboard = () => {
               <label className="text-sm font-medium">Project</label>
               <Select value={selectedProject} onValueChange={setSelectedProject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Projects" />
+                  <SelectValue placeholder="Select Project" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
                   {projects.map((project: any) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
@@ -406,18 +419,32 @@ export const JiraDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Invite Client Button - only show if user can manage users and project is selected */}
+            {canManageUsers && selectedProject && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium invisible">Action</label>
+                <Button 
+                  onClick={() => setIsInviteClientModalOpen(true)}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Invite Client
+                </Button>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between mt-3">
-            {(selectedProject !== "all" || selectedStatus !== "all" || selectedAssignee !== "all" || selectedMonth !== "all" || selectedWeek !== "all" || selectedDate !== "all") ? (
+            {(selectedStatus !== "all" || selectedAssignee !== "all" || selectedMonth !== "all" || selectedWeek !== "all" || selectedDate !== "all") ? (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">
-                  Showing {tasks.length} of {allTasks.length} tasks
+                  Showing {tasks.length} filtered tasks
                 </Badge>
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => {
-                    setSelectedProject("all");
                     setSelectedStatus("all");
                     setSelectedAssignee("all");
                     setSelectedMonth("all");
@@ -726,6 +753,28 @@ export const JiraDashboard = () => {
         </div>
         </>
       )}
+
+      {/* Client Invitation Modal */}
+      {selectedProject !== "all" && (() => {
+        const selectedProjectData = projects.find(p => p.id === selectedProject);
+        // Use workspaceId from members data instead of project data to ensure user has access
+        const workspaceId = members.length > 0 ? members[0].workspaceId : null;
+        
+        if (!workspaceId) {
+          console.error("Cannot open invite modal: workspaceId not found in members", { members: members.slice(0, 2) });
+          return null;
+        }
+        
+        return (
+          <InviteClientModal
+            projectId={selectedProject}
+            projectName={selectedProjectData?.name || "Selected Project"}
+            workspaceId={workspaceId}
+            isOpen={isInviteClientModalOpen}
+            onClose={() => setIsInviteClientModalOpen(false)}
+          />
+        );
+      })()}
     </div>
   );
 };

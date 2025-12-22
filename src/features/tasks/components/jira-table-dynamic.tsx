@@ -48,6 +48,7 @@ interface JiraTableProps {
   data: Task[];
   workspaceId: string;
   onAddSubtask?: (parentTaskId: string) => void;
+  canCreateTask?: boolean;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -57,7 +58,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   "Critical": "bg-red-100 text-red-800",
 };
 
-export function JiraTableDynamic({ data, workspaceId, onAddSubtask }: JiraTableProps) {
+export function JiraTableDynamic({ data, workspaceId, onAddSubtask, canCreateTask = true }: JiraTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -1074,6 +1075,7 @@ export function JiraTableDynamic({ data, workspaceId, onAddSubtask }: JiraTableP
                   onCreateInlineSubtask={handleCreateInlineSubtask}
                   selectedTaskIds={selectedTaskIds}
                   isAdmin={isAdmin}
+                  canCreateTask={canCreateTask}
                 />
               ))}
               {hasMore && (
@@ -1130,6 +1132,7 @@ interface TaskRowProps {
   onCreateInlineSubtask: (parentTaskId: string, parentTask: Task) => void;
   selectedTaskIds: Set<string>;
   isAdmin: boolean;
+  canCreateTask: boolean;
 }
 
 const TaskRow = memo(function TaskRow({
@@ -1154,6 +1157,7 @@ const TaskRow = memo(function TaskRow({
   onCreateInlineSubtask,
   selectedTaskIds,
   isAdmin,
+  canCreateTask,
 }: TaskRowProps) {
   const children = childrenMap.get(task.id) || [];
   const hasChildren = children.length > 0;
@@ -1248,7 +1252,7 @@ const TaskRow = memo(function TaskRow({
                 <div className="flex-1 min-w-0 truncate overflow-hidden">
                   {renderCell(task, column, (e) => onCellClick(task, column, e))}
                 </div>
-                {hoveredTaskId === task.id && isAdmin && (
+                {hoveredTaskId === task.id && isAdmin && canCreateTask && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1366,6 +1370,7 @@ const TaskRow = memo(function TaskRow({
                 onCreateInlineSubtask={onCreateInlineSubtask}
                 selectedTaskIds={selectedTaskIds}
                 isAdmin={isAdmin}
+                canCreateTask={canCreateTask}
               />
             );
           })}

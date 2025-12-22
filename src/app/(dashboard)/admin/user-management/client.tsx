@@ -119,6 +119,7 @@ export const UserManagementClient = () => {
       [MemberRole.EMPLOYEE]: "employee",
       [MemberRole.MANAGEMENT]: "management",
       [MemberRole.MEMBER]: "member",
+      [MemberRole.CLIENT]: "client",
     };
 
     const roleName = roleNames[role];
@@ -145,6 +146,7 @@ export const UserManagementClient = () => {
       [MemberRole.EMPLOYEE]: { icon: "👷", color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300", label: "Employee" },
       [MemberRole.MANAGEMENT]: { icon: "📈", color: "bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300", label: "Management" },
       [MemberRole.MEMBER]: { icon: "👤", color: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300", label: "Member" },
+      [MemberRole.CLIENT]: { icon: "🔒", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300", label: "Client" },
     };
 
     const config = roleConfig[role];

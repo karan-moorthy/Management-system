@@ -78,12 +78,35 @@ const app = new Hono()
       const user = c.get("user");
       const { workspaceId } = c.req.valid("query");
 
-      // Check if user is admin
-      const adminCheck = await isUserAdmin(user.id);
-      
+      // Get user's member record to check role and projectId
+      const [member] = await db
+        .select()
+        .from(members)
+        .where(eq(members.userId, user.id))
+        .limit(1);
+
+      if (!member) {
+        return c.json({ data: { documents: [], total: 0 } });
+      }
+
       let projectList;
-      
-      if (adminCheck) {
+
+      // CLIENT: Can only see their assigned project
+      if (member.role === MemberRole.CLIENT) {
+        if (!member.projectId) {
+          return c.json({ data: { documents: [], total: 0 } });
+        }
+
+        const [project] = await db
+          .select()
+          .from(projects)
+          .where(eq(projects.id, member.projectId))
+          .limit(1);
+
+        projectList = project ? [project] : [];
+      }
+      // Check if user is admin
+      else if ([MemberRole.ADMIN, MemberRole.PROJECT_MANAGER, MemberRole.MANAGEMENT].includes(member.role as MemberRole)) {
         // Admins: Return all projects (limited to 50 for performance)
         if (workspaceId) {
           projectList = await db
@@ -160,7 +183,20 @@ const app = new Hono()
       return c.json({ error: "Project not found" }, 404);
     }
 
-    // Project-centric: Any authenticated user can view projects
+    // Check if user is CLIENT with projectId restriction
+    const [member] = await db
+      .select()
+      .from(members)
+      .where(eq(members.userId, user.id))
+      .limit(1);
+
+    if (member?.role === MemberRole.CLIENT) {
+      // CLIENT can only access their assigned project
+      if (member.projectId !== projectId) {
+        return c.json({ error: "Forbidden: You don't have access to this project" }, 403);
+      }
+    }
+
     return c.json({ data: project });
   })
   .patch(

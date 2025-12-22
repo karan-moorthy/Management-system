@@ -3,6 +3,7 @@
 import { LoaderIcon, PlusIcon, XIcon, FolderIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useCallback, useState } from "react";
+import { usePermissionContext } from "@/components/providers/permission-provider";
 
 import { useProjectId } from "@/features/projects/hooks/use-project-id";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
@@ -39,6 +40,10 @@ export const TaskViewSwitcher = ({
   const [{ status, assigneeId, projectId, dueDate, month, week }, setFilters] = useTaskFilters();
   const [view, setView] = useQueryState("task-view", { defaultValue: "table" });
   const { mutate: bulkUpdate } = useBulkUpdateTasks();
+  const { canCreateTask: canCreateTaskFn } = usePermissionContext();
+  
+  // Call the function to get the actual boolean value
+  const canCreateTask = canCreateTaskFn(projectId || undefined);
   
   // Subtask modal state
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
@@ -127,10 +132,12 @@ export const TaskViewSwitcher = ({
               Calendar
             </TabsTrigger>
           </TabsList>
-          <Button onClick={open} size="sm" className="w-full lg:w-auto">
-            <PlusIcon className="size-4 mr-2" />
-            New
-          </Button>
+          {canCreateTask && (
+            <Button onClick={open} size="sm" className="w-full lg:w-auto">
+              <PlusIcon className="size-4 mr-2" />
+              New
+            </Button>
+          )}
         </div>
         <DottedSeparator className="my-4" />
         <DataFilters hideProjectFilter={hideProjectFilter} />
@@ -155,6 +162,7 @@ export const TaskViewSwitcher = ({
                   data={(tasks?.documents ?? []) as Task[]}
                   workspaceId={effectiveWorkspaceId}
                   onAddSubtask={handleAddSubtask}
+                  canCreateTask={canCreateTask}
                 />
               ) : (
                 <div className="w-full border rounded-lg h-[200px] flex flex-col items-center justify-center">

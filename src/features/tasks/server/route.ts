@@ -191,6 +191,7 @@ const app = new Hono()
 
       // Check user's role to determine access level
       let isAdmin = false;
+      let clientProjectId: string | null = null;
       
       if (workspaceId) {
         const member = await getMember({
@@ -208,10 +209,15 @@ const app = new Hono()
           MemberRole.PROJECT_MANAGER,
           MemberRole.MANAGEMENT,
         ].includes(member.role as MemberRole);
+        
+        // Check if user is CLIENT and get their assigned project
+        if (member.role === MemberRole.CLIENT && member.projectId) {
+          clientProjectId = member.projectId;
+        }
       } else {
         // No workspace context - check role in ANY workspace
         const [userMember] = await db
-          .select({ role: members.role })
+          .select({ role: members.role, projectId: members.projectId })
           .from(members)
           .where(eq(members.userId, user.id))
           .limit(1);
@@ -222,14 +228,24 @@ const app = new Hono()
             MemberRole.PROJECT_MANAGER,
             MemberRole.MANAGEMENT,
           ].includes(userMember.role as MemberRole);
+          
+          // Check if user is CLIENT and get their assigned project
+          if (userMember.role === MemberRole.CLIENT && userMember.projectId) {
+            clientProjectId = userMember.projectId;
+          }
         }
       }
 
       // Build where conditions
       const conditions = [];
       
-      // RBAC: Employees can only see their own tasks (assigned to them)
-      if (!isAdmin) {
+      // RBAC: Handle different role access patterns
+      if (clientProjectId) {
+        // CLIENT: can only see tasks from their assigned project
+        console.log(`👥 Client query for project: ${clientProjectId}`);
+        conditions.push(eq(tasks.projectId, clientProjectId));
+      } else if (!isAdmin) {
+        // EMPLOYEE: can only see their own tasks (assigned to them)
         console.log(`👤 Employee query for user: ${user.id}`);
         conditions.push(eq(tasks.assigneeId, user.id));
         // Employees see both workspace tasks AND individual tasks (workspaceId = null)
@@ -512,9 +528,13 @@ const app = new Hono()
           return c.json({ error: "Unauthorized" }, 401);
         }
 
-        // RBAC: All roles except MANAGEMENT can create tasks
+        // RBAC: MANAGEMENT and CLIENT cannot create tasks
         if (member.role === MemberRole.MANAGEMENT) {
           return c.json({ error: "Forbidden: Management role cannot create tasks" }, 403);
+        }
+        
+        if (member.role === MemberRole.CLIENT) {
+          return c.json({ error: "Forbidden: Client role cannot create tasks" }, 403);
         }
       }
 
@@ -1294,9 +1314,9 @@ const app = new Hono()
             }
           }
         }
-          
-          // Define standard fields that don't need column creation
-          const standardFields = [
+        
+        // Define standard fields that don't need column creation
+        const standardFields = [
             'summary', 'task', 'title', 'description',
             'summary id', 'summaryid', 'task id',
             'issue id', 'issueid', 'key', 'id',
@@ -1320,77 +1340,77 @@ const app = new Hono()
             'actual hours', 'actualhours', 'actual time', 'time spent',
             'position', 'order', 'rank'
           ];
+        
+        // Find missing columns that need to be created
+        const missingColumns: Array<{ header: string; fieldName: string; columnType: string; width: number }> = [];
+        
+        headers.forEach(header => {
+          const normalizedHeader = header.trim().toLowerCase();
+          const fieldName = header.trim().toLowerCase().replace(/\s+/g, '_');
           
-          // Find missing columns that need to be created
-          const missingColumns: Array<{ header: string; fieldName: string; columnType: string; width: number }> = [];
-          
-          headers.forEach(header => {
-            const normalizedHeader = header.trim().toLowerCase();
-            const fieldName = header.trim().toLowerCase().replace(/\s+/g, '_');
-            
-            // Skip if it's a standard field or already exists
-            if (standardFields.includes(normalizedHeader) || existingFieldNames.has(fieldName)) {
-              return;
-            }
-            
-            // Auto-detect column type based on field name
-            let columnType: 'text' | 'user' | 'date' | 'select' | 'priority' | 'labels' = 'text';
-            let width = 150;
-            
-            if (normalizedHeader.includes('date')) {
-              columnType = 'date';
-              width = 140;
-            } else if (normalizedHeader.includes('label') || normalizedHeader.includes('tag')) {
-              columnType = 'labels';
-              width = 200;
-            } else if (normalizedHeader === 'priority') {
-              columnType = 'priority';
-              width = 120;
-            } else if (normalizedHeader === 'status' || normalizedHeader === 'type' || normalizedHeader === 'resolution') {
-              columnType = 'select';
-              width = 140;
-            }
-            
-            missingColumns.push({
-              header: header.trim(),
-              fieldName,
-              columnType,
-              width
-            });
-          });
-          
-          // Create missing columns
-          if (missingColumns.length > 0) {
-            console.log(`📝 Creating ${missingColumns.length} missing columns:`, missingColumns.map(c => c.header));
-            
-            // Get max position for ordering
-            const maxPosition = existingColumns.length > 0 
-              ? Math.max(...existingColumns.map(col => col.position || 0))
-              : 0;
-            
-            for (let i = 0; i < missingColumns.length; i++) {
-              const col = missingColumns[i];
-              try {
-                await db.insert(listViewColumns).values({
-                  projectId: project.id,
-                  fieldName: col.fieldName,
-                  displayName: col.header,
-                  columnType: col.columnType,
-                  width: col.width,
-                  position: maxPosition + i + 1,
-                  isVisible: true,
-                  isSortable: true,
-                  isFilterable: true,
-                  isSystem: false,
-                });
-                console.log(`✅ Created column: ${col.header} (${col.columnType})`);
-              } catch (error) {
-                console.error(`❌ Failed to create column ${col.header}:`, error);
-              }
-            }
-          } else {
-            console.log('✅ No missing columns - all CSV columns already exist in project');
+          // Skip if it's a standard field or already exists
+          if (standardFields.includes(normalizedHeader) || existingFieldNames.has(fieldName)) {
+            return;
           }
+          
+          // Auto-detect column type based on field name
+          let columnType: 'text' | 'user' | 'date' | 'select' | 'priority' | 'labels' = 'text';
+          let width = 150;
+          
+          if (normalizedHeader.includes('date')) {
+            columnType = 'date';
+            width = 140;
+          } else if (normalizedHeader.includes('label') || normalizedHeader.includes('tag')) {
+            columnType = 'labels';
+            width = 200;
+          } else if (normalizedHeader === 'priority') {
+            columnType = 'priority';
+            width = 120;
+          } else if (normalizedHeader === 'status' || normalizedHeader === 'type' || normalizedHeader === 'resolution') {
+            columnType = 'select';
+            width = 140;
+          }
+          
+          missingColumns.push({
+            header: header.trim(),
+            fieldName,
+            columnType,
+            width
+          });
+        });
+        
+        // Create missing columns
+        if (missingColumns.length > 0) {
+          console.log(`📝 Creating ${missingColumns.length} missing columns:`, missingColumns.map(c => c.header));
+          
+          // Get max position for ordering
+          const maxPosition = existingColumns.length > 0 
+            ? Math.max(...existingColumns.map(col => col.position || 0))
+            : 0;
+          
+          for (let i = 0; i < missingColumns.length; i++) {
+            const col = missingColumns[i];
+            try {
+              await db.insert(listViewColumns).values({
+                projectId: project.id,
+                fieldName: col.fieldName,
+                displayName: col.header,
+                columnType: col.columnType,
+                width: col.width,
+                position: maxPosition + i + 1,
+                isVisible: true,
+                isSortable: true,
+                isFilterable: true,
+                isSystem: false,
+              });
+              console.log(`✅ Created column: ${col.header} (${col.columnType})`);
+            } catch (error) {
+              console.error(`❌ Failed to create column ${col.header}:`, error);
+            }
+          }
+        } else {
+          console.log('✅ No missing columns - all CSV columns already exist in project');
+        }
         
         // Helper function to get value from row using header name (case-insensitive, flexible matching)
         const getCellValue = (row: string[], headerNames: string[]): string => {

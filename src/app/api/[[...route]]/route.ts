@@ -20,6 +20,7 @@ import notifications from "@/features/notifications/server/route";
 import weeklyReports from "@/features/weekly-reports/server/route";
 import bugs from "@/features/bugs/server/route";
 import admin from "@/features/admin/server/route";
+import clients from "@/features/clients/server/route";
 
 const app = new Hono().basePath("/api");
 
@@ -42,7 +43,8 @@ const routes = app
   .route("/notifications", notifications)
   .route("/weekly-reports", weeklyReports)
   .route("/bugs", bugs)
-  .route("/admin", admin);
+  .route("/admin", admin)
+  .route("/clients", clients);
 
 // Start cron service for auto-ending shifts at 11:59 PM
 if (process.env.NODE_ENV !== 'test') {
