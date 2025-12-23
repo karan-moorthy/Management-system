@@ -129,7 +129,12 @@ const app = new Hono()
         console.log("Existing invitation check:", existingInvitation?.id);
 
         if (existingInvitation) {
-          return c.json({ error: "An invitation has already been sent to this email for this project" }, 400);
+          // Delete old invitation and create a new one (resend functionality)
+          await db
+            .delete(clientInvitations)
+            .where(eq(clientInvitations.id, existingInvitation.id));
+          
+          console.log("Deleted old invitation, creating new one...");
         }
 
         // Generate secure token

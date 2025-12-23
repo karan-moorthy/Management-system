@@ -178,7 +178,7 @@ export const Sidebar = () => {
               )}
             >
               <GoalIcon className="size-4" />
-              Add Tasks
+              {role === MemberRole.CLIENT ? "View Tasks" : "Add Tasks"}
             </Link>
             {role !== MemberRole.CLIENT && (
               <>

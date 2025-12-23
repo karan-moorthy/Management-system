@@ -10,7 +10,6 @@ const DashboardPage = async () => {
     <div className="h-full flex flex-col p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Monitor all of your projects and tasks here.</p>
       </div>
       <JiraDashboard />
     </div>

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { db } from "@/db";
-import { sessions, users } from "@/db/schema";
+import { sessions, users, members } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { AUTH_COOKIE } from "./constants";
 
@@ -31,6 +31,24 @@ export const getCurrent = async () => {
       .limit(1);
 
     return user || null;
+  } catch {
+    return null;
+  }
+};
+
+export const getCurrentMember = async () => {
+  try {
+    const user = await getCurrent();
+    if (!user) return null;
+
+    // Get member info to check role
+    const [member] = await db
+      .select()
+      .from(members)
+      .where(eq(members.userId, user.id))
+      .limit(1);
+
+    return member || null;
   } catch {
     return null;
   }

@@ -16,7 +16,7 @@ const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) =
   const defaultTab = searchParams.tab || "individual";
 
   // Check if user is admin in any workspace
-  const isAdmin = await (async () => {
+  const memberData = await (async () => {
     try {
       const { db } = await import("@/db");
       const { members } = await import("@/db/schema");
@@ -31,7 +31,7 @@ const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) =
       
       if (!memberRole) {
         console.log("❌ No member role found - not admin");
-        return false;
+        return { isAdmin: false, isClient: false };
       }
       
       const isAdminRole = [
@@ -40,16 +40,19 @@ const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) =
         MemberRole.MANAGEMENT,
       ].includes(memberRole.role as MemberRole);
       
+      const isClientRole = memberRole.role === MemberRole.CLIENT;
+      
       console.log(`✅ Is admin: ${isAdminRole} (Role: ${memberRole.role})`);
       
-      return isAdminRole;
+      return { isAdmin: isAdminRole, isClient: isClientRole };
     } catch (error) {
       console.error("❌ Error checking admin status:", error);
-      return false;
+      return { isAdmin: false, isClient: false };
     }
   })();
 
-  console.log(`🎯 Final isAdmin value: ${isAdmin}`);
+  const { isAdmin, isClient } = memberData;
+  console.log(`🎯 Final isAdmin value: ${isAdmin}, isClient: ${isClient}`);
 
   return (
     <div className="h-full flex flex-col p-6 space-y-6">
@@ -57,7 +60,9 @@ const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) =
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold">Tasks</h1>
         <p className="text-muted-foreground">
-          Create individual tasks or import multiple tasks at once
+          {isClient 
+            ? "View and monitor your assigned tasks" 
+            : "Create individual tasks or import multiple tasks at once"}
         </p>
       </div>
 
@@ -89,9 +94,13 @@ const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) =
         <TabsContent value="individual" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Individual Task Management</CardTitle>
+              <CardTitle>
+                {isClient ? "Task Overview" : "Individual Task Management"}
+              </CardTitle>
               <CardDescription>
-                Create, view, and manage tasks individually. Use filters to find specific tasks.
+                {isClient 
+                  ? "View and track tasks assigned to your project. Use filters to find specific tasks."
+                  : "Create, view, and manage tasks individually. Use filters to find specific tasks."}
               </CardDescription>
             </CardHeader>
             <CardContent>
