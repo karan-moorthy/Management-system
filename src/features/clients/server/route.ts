@@ -161,7 +161,7 @@ const app = new Hono()
           const emailService = createEmailService();
           
           await emailService.sendEmail({
-            to: email,
+            to: email, // Send to the client's email address
             subject: createClientInvitationEmailSubject(project.name),
             html: createClientInvitationEmailTemplate({
               clientEmail: email,

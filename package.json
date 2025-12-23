@@ -15,7 +15,9 @@
     "migrate:roles": "tsx scripts/migrate-member-roles.ts",
     "migrate:roles:preview": "tsx scripts/migrate-member-roles.ts --dry-run",
     "manage:roles": "tsx scripts/manage-member-roles.ts",
-    "create:role-users": "tsx scripts/create-role-based-users.ts",    "manage:test-users": "tsx scripts/manage-test-users.ts",    "add:users-to-workspaces": "tsx scripts/add-users-to-workspaces.ts"
+    "create:role-users": "tsx scripts/create-role-based-users.ts",
+    "manage:test-users": "tsx scripts/manage-test-users.ts",
+    "add:users-to-workspaces": "tsx scripts/add-users-to-workspaces.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
@@ -42,6 +44,7 @@
     "@tanstack/react-table": "8.20.5",
     "@tanstack/react-virtual": "^3.13.12",
     "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^7.0.4",
     "@types/pg": "^8.15.6",
     "@types/react-window": "^1.8.8",
     "bcryptjs": "^3.0.3",
@@ -60,6 +63,7 @@
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
     "node-appwrite": "14.0.0",
+    "nodemailer": "^7.0.12",
     "nuqs": "1.19.1",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
