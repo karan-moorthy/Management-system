@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Task } from "../types";
+import { Task, TaskStatus, TaskPriority, IssueType } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,12 +30,13 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const workspaceId = task?.workspaceId || "";
   
-  // Fetch subtasks
+  // Fetch subtasks - parentTaskId filter not supported, will need custom implementation
   const { data: subtasksData } = useGetTasks({
-    parentTaskId: task?.id,
+    workspaceId,
   });
-  const subtasks = subtasksData?.documents || [];
+  const subtasks = subtasksData?.documents?.filter(t => t.parentTaskId === task?.id) || [];
 
   // Fetch activity logs
   const { data: activityData } = useGetActivityLogs({
@@ -64,8 +65,8 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
     createTask.mutate({
       json: {
         summary: subtaskTitle,
-        status: "To Do",
-        priority: "Medium",
+        status: TaskStatus.TODO,
+        priority: TaskPriority.MEDIUM,
         parentTaskId: task.id,
         projectId: task.projectId || undefined,
         workspaceId: task.workspaceId || undefined,
@@ -96,7 +97,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
   };
 
   const handleSubtaskStatusToggle = (subtask: Task) => {
-    const newStatus = subtask.status === "Done" ? "To Do" : "Done";
+    const newStatus = subtask.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE;
     updateTask.mutate({
       json: { status: newStatus },
       param: { taskId: subtask.id }
@@ -354,10 +355,10 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                     className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 transition-colors group"
                   >
                     <button
-                      onClick={() => handleSubtaskStatusToggle(subtask)}
+                      onClick={() => handleSubtaskStatusToggle(subtask as Task)}
                       className="flex-shrink-0"
                     >
-                      {subtask.status === "Done" ? (
+                      {subtask.status === TaskStatus.DONE ? (
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                       ) : (
                         <Circle className="h-4 w-4 text-muted-foreground" />
@@ -367,7 +368,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
                       <span
                         className={cn(
                           "text-sm",
-                          subtask.status === "Done" && "line-through text-muted-foreground"
+                          subtask.status === TaskStatus.DONE && "line-through text-muted-foreground"
                         )}
                       >
                         {subtask.summary}

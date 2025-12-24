@@ -20,6 +20,7 @@ const getRoleDisplayName = (role: MemberRole): string => {
     [MemberRole.EMPLOYEE]: "Employee",
     [MemberRole.MANAGEMENT]: "Management",
     [MemberRole.MEMBER]: "Member",
+    [MemberRole.CLIENT]: "Client",
   };
   return names[role] || role;
 };
@@ -33,6 +34,7 @@ const getRoleBadgeColor = (role: MemberRole): string => {
     [MemberRole.EMPLOYEE]: "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400",
     [MemberRole.MANAGEMENT]: "bg-gray-100 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400",
     [MemberRole.MEMBER]: "bg-slate-100 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400",
+    [MemberRole.CLIENT]: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400",
   };
   return colors[role] || "bg-gray-100 text-gray-700";
 };

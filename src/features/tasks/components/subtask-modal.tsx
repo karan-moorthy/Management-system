@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createTaskSchema } from "../schemas";
 import { useCreateTask } from "../api/use-create-task";
+import { TaskStatus, TaskPriority, IssueType } from "../types";
 import {
   Dialog,
   DialogContent,
@@ -61,9 +62,9 @@ export function SubtaskModal({
     defaultValues: {
       summary: "",
       description: "",
-      status: "TODO",
-      priority: "Medium",
-      issueType: "Task",
+      status: TaskStatus.TODO,
+      priority: TaskPriority.MEDIUM,
+      issueType: IssueType.TASK,
       workspaceId,
       parentTaskId: parentTask?.id || undefined,
     },
@@ -221,7 +222,7 @@ export function SubtaskModal({
                     </FormControl>
                     <SelectContent>
                       {members?.documents.map((member) => (
-                        <SelectItem key={member.$id} value={member.userId}>
+                        <SelectItem key={member.id} value={member.userId}>
                           <div className="flex items-center gap-2">
                             <MemberAvatar
                               name={member.name}

@@ -28,7 +28,12 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useCreateWeeklyReport } from '../api/use-create-weekly-report';
-import type { DailyDescription } from '../types';
+
+type DailyDescription = {
+  date: string;
+  description: string;
+  fileUrls: string[];
+};
 
 const formSchema = z.object({
   fromDate: z.date({
@@ -131,7 +136,7 @@ export function WeeklyReportForm({ userDepartment }: WeeklyReportFormProps) {
         fromDate: format(data.fromDate, 'yyyy-MM-dd'),
         toDate: format(data.toDate, 'yyyy-MM-dd'),
         department: data.department,
-        dailyDescriptions: descriptionsWithUrls,
+        dailyDescriptions: descriptionsWithUrls as any,
       });
 
       // Reset form

@@ -465,7 +465,7 @@ export function EmployeeWeeklyReportForm({ userDepartment }: { userDepartment: s
         {
           onSuccess: (response) => {
             console.log('[Draft Save] Draft created successfully:', response);
-            if (response.data) {
+            if ('data' in response && response.data) {
               setCurrentDraftId(response.data.id);
               console.log('[Draft Save] Set current draft ID to:', response.data.id);
             }

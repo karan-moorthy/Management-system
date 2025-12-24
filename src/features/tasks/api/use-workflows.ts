@@ -6,7 +6,7 @@ export const useGetWorkflows = (workspaceId: string) => {
   return useQuery({
     queryKey: ["workflows", workspaceId],
     queryFn: async () => {
-      const response = await client.api.tasks["custom-fields"].workflows.$get({
+      const response = await client.api.tasks.workflows.workflows.$get({
         query: { workspaceId },
       });
 
@@ -26,7 +26,7 @@ export const useGetDefaultWorkflow = (workspaceId: string) => {
   return useQuery({
     queryKey: ["workflows", "default", workspaceId],
     queryFn: async () => {
-      const response = await client.api.tasks["custom-fields"].workflows.$get({
+      const response = await client.api.tasks.workflows.workflows.$get({
         query: { workspaceId },
       });
 
@@ -65,7 +65,7 @@ export const useCreateWorkflow = () => {
       }>;
       isDefault?: boolean;
     }) => {
-      const response = await client.api.tasks["custom-fields"].workflows.$post({
+      const response = await client.api.tasks.workflows.workflows.$post({
         json: payload,
       });
 
@@ -113,7 +113,7 @@ export const useUpdateWorkflow = () => {
       }>;
       isDefault?: boolean;
     }) => {
-      const response = await (client.api.tasks["custom-fields"].workflows as any)[":id"].$patch({
+      const response = await (client.api.tasks.workflows.workflows as any)[":id"].$patch({
         param: { id },
         json: payload,
       });
@@ -152,7 +152,7 @@ export const useAddStatusToWorkflow = () => {
         color?: string;
       };
     }) => {
-      const response = await (client.api.tasks["custom-fields"].workflows as any)[":id"].statuses.$post({
+      const response = await (client.api.tasks.workflows.workflows as any)[":id"].statuses.$post({
         param: { id: workflowId },
         json: { status },
       });

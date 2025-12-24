@@ -110,6 +110,8 @@ export const EditTaskFormWrapper = ({
     dueDate: initialValues.dueDate || undefined,
     workspaceId: initialValues.workspaceId || "",
     assignee: initialValues.assignee || undefined,
+    reporter: initialValues.reporter || undefined,
+    creator: initialValues.creator || undefined,
     project: initialValues.project || undefined,
   };
 

@@ -71,10 +71,22 @@ export const BoardView = () => {
     labels: task.labels ? (Array.isArray(task.labels) ? task.labels as string[] : []) : undefined,
     estimatedHours: task.estimatedHours ?? undefined,
     actualHours: task.actualHours ?? 0,
+    parentTaskId: task.parentTaskId ?? undefined,
+    customFields: task.customFields ? (typeof task.customFields === 'object' && task.customFields !== null ? task.customFields as { [key: string]: any } : undefined) : undefined,
     assignee: task.assignee ? {
       id: task.assignee.id,
       name: task.assignee.name || '',
       email: task.assignee.email || '',
+    } : undefined,
+    reporter: task.reporter ? {
+      id: task.reporter.id,
+      name: task.reporter.name || '',
+      email: task.reporter.email || '',
+    } : undefined,
+    creator: task.creator ? {
+      id: task.creator.id,
+      name: task.creator.name || '',
+      email: task.creator.email || '',
     } : undefined,
     project: task.project ?? undefined,
   })) || [];

@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { signUpWithGithub, signUpWithGoogle } from "@/lib/oauth";
+// import { signUpWithGithub, signUpWithGoogle } from "@/lib/oauth"; // OAuth removed - not using Appwrite
 
 import { registerSchema } from "../schemas";
 import { useRegister } from "../api/use-register";
@@ -121,13 +121,12 @@ export const SignUpCard = () => {
           </form>
         </Form>
       </CardContent>
-      <div className="px-7">
+      {/* OAuth buttons removed - not using Appwrite authentication */}
+      {/* <div className="px-7">
         <DottedSeparator />
       </div>
       <CardContent className="p-7 flex flex-col gap-y-4">
         <Button
-          onClick={() => signUpWithGoogle()}
-          disabled={isPending}
           variant="secondary"
           size="lg"
           className="w-full"
@@ -136,8 +135,6 @@ export const SignUpCard = () => {
           Sign Up with Google
         </Button>
         <Button
-          onClick={() => signUpWithGithub()}
-          disabled={isPending}
           variant="secondary"
           size="lg"
           className="w-full"
@@ -145,7 +142,7 @@ export const SignUpCard = () => {
           <FaGithub className="mr-2 size-5" />
           Sign Up with GitHub
         </Button>
-      </CardContent>
+      </CardContent> */}
       <div className="px-7">
         <DottedSeparator />
       </div>

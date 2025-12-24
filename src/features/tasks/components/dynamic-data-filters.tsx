@@ -5,7 +5,7 @@ import { useGetMembers } from "@/features/members/api/use-get-members";
 import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { useIsGlobalAdmin } from "@/features/members/api/use-get-user-role";
-import { useGetCustomFieldDefinitions, useGetIssueTypes } from "../api/use-get-custom-fields";
+// import { useGetCustomFieldDefinitions, useGetIssueTypes } from "../api/use-get-custom-fields";
 
 import { DatePicker } from "@/components/date-picker";
 import {
@@ -34,9 +34,13 @@ export const DynamicDataFilters = ({ hideProjectFilter }: DynamicDataFiltersProp
     setMounted(true);
   }, []);
 
-  // Fetch custom field definitions
-  const { data: customFields, isLoading: isLoadingCustomFields } = useGetCustomFieldDefinitions(workspaceId);
-  const { data: issueTypes, isLoading: isLoadingIssueTypes } = useGetIssueTypes(workspaceId);
+  // Fetch custom field definitions (DISABLED - TODO: Implement backend routes)
+  // const { data: customFields, isLoading: isLoadingCustomFields } = useGetCustomFieldDefinitions(workspaceId);
+  // const { data: issueTypes, isLoading: isLoadingIssueTypes } = useGetIssueTypes(workspaceId);
+  const customFields: any[] = [];
+  const issueTypes: any[] = [];
+  const isLoadingCustomFields = false;
+  const isLoadingIssueTypes = false;
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({
     workspaceId,

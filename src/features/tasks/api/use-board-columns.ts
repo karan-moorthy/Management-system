@@ -19,7 +19,7 @@ export const useGetBoardColumns = (workspaceId: string) => {
   return useQuery({
     queryKey: ["board-columns", workspaceId],
     queryFn: async () => {
-      const response = await client.api.tasks["custom-fields"]["board-columns"].$get({
+      const response = await client.api.tasks.workflows["board-columns"].$get({
         query: { workspaceId },
       });
 
@@ -46,7 +46,7 @@ export const useCreateBoardColumn = () => {
       color?: string;
       category: "TODO" | "IN_PROGRESS" | "DONE";
     }) => {
-      const response = await client.api.tasks["custom-fields"]["board-columns"].$post({
+      const response = await client.api.tasks.workflows["board-columns"].$post({
         json: data,
       });
       
@@ -86,7 +86,7 @@ export const useUpdateBoardColumn = () => {
       color?: string;
       category?: "TODO" | "IN_PROGRESS" | "DONE";
     }) => {
-      const response = await (client.api.tasks["custom-fields"]["board-columns"] as any)[":id"].$patch({
+      const response = await (client.api.tasks.workflows["board-columns"] as any)[":id"].$patch({
         param: { id },
         json: data,
       });
@@ -114,7 +114,7 @@ export const useDeleteBoardColumn = () => {
 
   return useMutation({
     mutationFn: async ({ id, workspaceId }: { id: string; workspaceId: string }) => {
-      const response = await (client.api.tasks["custom-fields"]["board-columns"] as any)[":id"].$delete({
+      const response = await (client.api.tasks.workflows["board-columns"] as any)[":id"].$delete({
         param: { id },
       });
 
