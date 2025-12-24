@@ -38,13 +38,13 @@ const app = new Hono()
         name: z.string().min(2),
         email: z.string().email(),
         password: z.string().min(6),
-        mobileNo: z.string().optional(),
-        native: z.string().optional(),
-        designation: z.string().optional(),
-        department: z.string().optional(),
+        mobileNo: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        native: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        designation: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        department: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
         experience: z.number().optional(),
-        dateOfBirth: z.string().optional(),
-        dateOfJoining: z.string().optional(),
+        dateOfBirth: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        dateOfJoining: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
         skills: z.array(z.string()).optional(),
       })
     ),
@@ -90,12 +90,27 @@ const app = new Hono()
 
         return c.json({ data: newUser });
       } catch (error: any) {
-        if (error.code === "23505") {
+        // Drizzle wraps PostgreSQL errors in error.cause
+        const pgError = error.cause || error;
+        if (pgError.code === "23505") {
           // Unique constraint violation
-          return c.json({ error: "Email already exists" }, 409);
+          const constraintName = pgError.constraint_name || '';
+          let errorMessage = '';
+          
+          if (constraintName.includes('email')) {
+            errorMessage = 'This email address is already registered. Please use a different email address.';
+          } else if (constraintName.includes('mobile')) {
+            errorMessage = 'This mobile number is already registered. Please use a different mobile number.';
+          } else if (constraintName.includes('name')) {
+            errorMessage = 'This name is already taken. Please use a different name.';
+          } else {
+            errorMessage = 'A user with these details already exists. Please check your information and try again.';
+          }
+          
+          return c.json({ error: errorMessage }, 409);
         }
         console.error("Error creating profile:", error);
-        return c.json({ error: error.message || "Internal server error" }, 500);
+        return c.json({ error: "Unable to create profile. Please check your information and try again." }, 500);
       }
     }
   )
@@ -242,13 +257,13 @@ const app = new Hono()
       z.object({
         name: z.string().min(2).optional(),
         email: z.string().email().optional(),
-        mobileNo: z.string().optional(),
-        native: z.string().optional(),
-        designation: z.string().optional(),
-        department: z.string().optional(),
+        mobileNo: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        native: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        designation: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        department: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
         experience: z.number().optional(),
-        dateOfBirth: z.string().optional(),
-        dateOfJoining: z.string().optional(),
+        dateOfBirth: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
+        dateOfJoining: z.preprocess(val => val === '' ? undefined : val, z.string().optional()),
         skills: z.array(z.string()).optional(),
       })
     ),
