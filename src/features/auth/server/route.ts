@@ -50,6 +50,8 @@ const app = new Hono()
     try {
       const { email, password } = c.req.valid("json");
 
+      console.log('[LOGIN] Attempting login for:', email);
+
       // Find user by email
       const [user] = await db
         .select()
@@ -57,18 +59,24 @@ const app = new Hono()
         .where(eq(users.email, email))
         .limit(1);
 
+      console.log('[LOGIN] User found:', user ? 'yes' : 'no');
+
       if (!user || !user.password) {
+        console.log('[LOGIN] User not found or no password');
         return c.json({ error: "Invalid email or password" }, 401);
       }
 
       // Verify password
+      console.log('[LOGIN] Comparing password...');
       const isPasswordValid = await compare(password, user.password);
+      console.log('[LOGIN] Password valid:', isPasswordValid);
 
       if (!isPasswordValid) {
         return c.json({ error: "Invalid email or password" }, 401);
       }
 
       // Create session
+      console.log('[LOGIN] Creating session...');
       const sessionToken = randomBytes(32).toString("hex");
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
@@ -78,6 +86,28 @@ const app = new Hono()
         userId: user.id,
         expires: expiresAt,
       });
+
+      console.log('[LOGIN] Session created successfully');
+
+      const isProd = process.env.NODE_ENV === 'production';
+      setCookie(c, AUTH_COOKIE, sessionToken, {
+        path: "/",
+        httpOnly: true,
+        secure: isProd, // Only secure in production
+        sameSite: isProd ? "strict" : "lax", // Lax for localhost
+        maxAge: 60 * 60 * 24 * 30,
+      });
+
+      return c.json({ success: true });
+    } catch (error) {
+      console.error('[LOGIN ERROR]', error);
+      return c.json({ 
+        error: "An error occurred during login. Please try again.",
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'production' ? undefined : error instanceof Error ? error.stack : undefined
+      }, 500);
+    }
+  })
 
       const isProd = process.env.NODE_ENV === 'production';
       setCookie(c, AUTH_COOKIE, sessionToken, {
