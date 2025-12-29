@@ -61,6 +61,10 @@ if (process.env.NODE_ENV !== 'test') {
   startCronService();
 }
 
+// Configure route for larger payloads (bulk uploads)
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 export const GET = handle(app);
 export const POST = handle(app);
 export const PATCH = handle(app);
