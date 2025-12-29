@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+import { bodyLimit } from "hono/body-limit";
 import { startCronService } from "@/lib/cron-service";
 
 import auth from "@/features/auth/server/route";
@@ -23,6 +24,14 @@ import admin from "@/features/admin/server/route";
 import clients from "@/features/clients/server/route";
 
 const app = new Hono().basePath("/api");
+
+// Increase body size limit for bulk uploads (10MB)
+app.use("*", bodyLimit({
+  maxSize: 10 * 1024 * 1024, // 10MB in bytes
+  onError: (c) => {
+    return c.text("Payload too large. Maximum size is 10MB.", 413);
+  },
+}));
 
 // Root health check endpoint
 app.get("/health", (c) => {
