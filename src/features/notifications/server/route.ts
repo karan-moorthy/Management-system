@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
@@ -34,11 +34,11 @@ const app = new Hono()
     const { notificationId } = c.req.param();
 
     try {
-      const [notification] = await db
+      const updateResult = await db
         .update(notifications)
         .set({
           isRead: "true",
-          readAt: new Date(),
+          readAt: sql`NOW()`,
         })
         .where(
           and(
@@ -46,16 +46,9 @@ const app = new Hono()
             eq(notifications.userId, user.id)
           )
         )
-        .returning();
+        .execute();
 
-      if (!notification) {
-        return c.json(
-          { success: false, message: "Notification not found" },
-          404
-        );
-      }
-
-      return c.json({ success: true, data: notification });
+      return c.json({ success: true });
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
       return c.json(
@@ -70,18 +63,19 @@ const app = new Hono()
     const user = c.get("user");
 
     try {
-      await db
+      const updateResult = await db
         .update(notifications)
         .set({
           isRead: "true",
-          readAt: new Date(),
+          readAt: sql`NOW()`,
         })
         .where(
           and(
             eq(notifications.userId, user.id),
             eq(notifications.isRead, "false")
           )
-        );
+        )
+        .execute();
 
       return c.json({ success: true });
     } catch (error) {
@@ -100,14 +94,14 @@ const app = new Hono()
     console.log('[Clear All Notifications] User:', user.id, 'Clearing all notifications');
 
     try {
-      const deletedNotifications = await db
+      const deleteResult = await db
         .delete(notifications)
         .where(eq(notifications.userId, user.id))
-        .returning();
+        .execute();
 
-      console.log('[Clear All Notifications] Deleted', deletedNotifications.length, 'notifications');
+      console.log('[Clear All Notifications] Deletion completed');
 
-      return c.json({ success: true, count: deletedNotifications.length });
+      return c.json({ success: true });
     } catch (error) {
       console.error("Failed to clear notifications:", error);
       return c.json(
@@ -123,7 +117,7 @@ const app = new Hono()
     const { notificationId } = c.req.param();
 
     try {
-      const [deleted] = await db
+      const deleteResult = await db
         .delete(notifications)
         .where(
           and(
@@ -131,14 +125,7 @@ const app = new Hono()
             eq(notifications.userId, user.id)
           )
         )
-        .returning();
-
-      if (!deleted) {
-        return c.json(
-          { success: false, message: "Notification not found" },
-          404
-        );
-      }
+        .execute();
 
       return c.json({ success: true });
     } catch (error) {

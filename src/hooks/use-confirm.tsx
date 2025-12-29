@@ -8,8 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-
+} from "@/components/ui/card";import { DialogTitle } from "@/components/ui/dialog";
 export const useConfirm = (
   title: string,
   message: string,
@@ -41,6 +40,7 @@ export const useConfirm = (
 
   const ConfirmationDialog = () => (
     <ResponsiveModal open={promise !== null} onOpenChange={handleClose}>
+      <DialogTitle className="sr-only">{title}</DialogTitle>
       <Card className="size-full border-none shadow-none">
         <CardContent className="pt-8">
           <CardHeader className="p-0">

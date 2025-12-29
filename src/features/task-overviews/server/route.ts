@@ -423,7 +423,6 @@ const app = new Hono()
                 actionBy: user.id,
                 actionByName: user.name,
                 isRead: "false",
-                createdAt: new Date(), // Explicitly set current UTC timestamp
               });
             } catch (error) {
               console.error("Failed to send task approval notification:", error);
@@ -540,7 +539,6 @@ const app = new Hono()
                 actionBy: user.id,
                 actionByName: user.name,
                 isRead: "false",
-                createdAt: new Date(),
               });
             } catch (error) {
               console.error("Failed to send rework notification:", error);

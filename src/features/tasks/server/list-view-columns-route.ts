@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 import { db } from "@/db/index";
 import { listViewColumns } from "@/db/schema";
@@ -138,7 +138,7 @@ const app = new Hono()
       const updatePromises = columnUpdates.map(({ id, position }) =>
         db
           .update(listViewColumns)
-          .set({ position, updatedAt: new Date() })
+          .set({ position, updatedAt: sql`NOW()` })
           .where(eq(listViewColumns.id, id))
       );
       

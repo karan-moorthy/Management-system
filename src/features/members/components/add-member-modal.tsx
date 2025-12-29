@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { DottedSeparator } from "@/components/dotted-separator";
 import { ResponsiveModal } from "@/components/responsive-modal";
+import { DialogTitle } from "@/components/ui/dialog";
 
 import { useAddMemberDirect } from "../api/use-add-member-direct";
 import { MemberRole } from "../types";
@@ -79,6 +80,7 @@ export const AddMemberModal = ({ open, setOpen, workspaceId }: AddMemberModalPro
 
   return (
     <ResponsiveModal open={open} onOpenChange={setOpen}>
+      <DialogTitle className="sr-only">Add Existing Member</DialogTitle>
       <Card className="w-full h-full border-none shadow-none">
         <CardHeader className="p-7">
           <CardTitle className="text-xl font-bold flex items-center gap-2">

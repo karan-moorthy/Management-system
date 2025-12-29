@@ -123,7 +123,6 @@ const app = new Hono()
                 actionBy: user.id,
                 actionByName: employeeName,
                 isRead: 'false',
-                createdAt: new Date(),
               }));
 
               console.log('[Weekly Report] Creating notifications:', notificationValues);

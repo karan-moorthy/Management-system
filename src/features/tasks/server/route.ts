@@ -1087,7 +1087,6 @@ const app = new Hono()
                   actionBy: user.id,
                   actionByName: user.name,
                   isRead: "false",
-                  createdAt: new Date(), // Explicitly set current UTC timestamp
                 }).returning();
                 console.log(`✅ Notification created:`, newNotification);
               }

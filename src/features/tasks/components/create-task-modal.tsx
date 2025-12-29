@@ -1,6 +1,7 @@
 "use client";
 
 import { ResponsiveModal } from "@/components/responsive-modal";
+import { DialogTitle } from "@/components/ui/dialog";
 
 import { CreateTaskFormWrapper } from "./create-task-form-wrapper";
 
@@ -11,6 +12,7 @@ export const CreateTaskModal = () => {
 
   return (
     <ResponsiveModal open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTitle className="sr-only">Create Task</DialogTitle>
       <CreateTaskFormWrapper onCancel={close} />
     </ResponsiveModal>
   );

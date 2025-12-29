@@ -9,11 +9,12 @@ import { FileSpreadsheet, ListTodo, ClipboardCheck } from "lucide-react";
 import { getMember } from "@/features/members/utils";
 import { MemberRole } from "@/features/members/types";
 
-const TasksPage = async ({ searchParams }: { searchParams: { tab?: string } }) => {
+const TasksPage = async ({ searchParams }: { searchParams: Promise<{ tab?: string }> }) => {
   const user = await getCurrent();
   if (!user) redirect("/sign-in");
 
-  const defaultTab = searchParams.tab || "individual";
+  const params = await searchParams;
+  const defaultTab = params.tab || "individual";
 
   // Check if user is admin in any workspace
   const memberData = await (async () => {

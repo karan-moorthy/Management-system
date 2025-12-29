@@ -213,12 +213,12 @@ export const NotificationButton = () => {
                             {notification.message}
                           </p>
                           {isLongMessage && (
-                            <button
+                            <span
                               onClick={(e) => toggleExpanded(notification.id, e)}
-                              className="text-xs text-primary hover:underline"
+                              className="text-xs text-primary hover:underline cursor-pointer inline-block"
                             >
                               {isExpanded ? "Show less" : "Show more"}
-                            </button>
+                            </span>
                           )}
                           <p className="text-xs text-muted-foreground">
                             {getRelativeTime(notification.createdAt)}

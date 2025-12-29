@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DottedSeparator } from "@/components/dotted-separator";
 import { ResponsiveModal } from "@/components/responsive-modal";
+import { DialogTitle } from "@/components/ui/dialog";
 
 import { useInviteMember } from "../api/use-invite-member";
 import { inviteMemberSchema } from "../schemas";
@@ -77,6 +78,7 @@ export const InviteMemberModal = ({
 
   return (
     <ResponsiveModal open={open} onOpenChange={handleClose}>
+      <DialogTitle className="sr-only">Invite Member</DialogTitle>
       <Card className="w-full h-full border-none shadow-none">
         <CardHeader className="p-7">
           <CardTitle className="text-xl font-bold">
