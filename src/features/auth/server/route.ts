@@ -123,22 +123,22 @@ const app = new Hono()
 
     return c.json({ success: true });
   })
-  .post("/logout", sessionMiddleware, async (c) => {
-    const user = c.get("user");
-    
-    // Get session token from cookie using getCookie helper
+  .post("/logout", async (c) => {
+    // Get session token from cookie - don't use sessionMiddleware as it may fail
     const sessionToken = getCookie(c, AUTH_COOKIE);
 
     if (sessionToken) {
       // Delete session from database
       try {
         await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+        console.log('Session deleted successfully:', sessionToken);
       } catch (error) {
         console.error('Session deletion error:', error);
         // Continue even if session deletion fails
       }
     }
 
+    // Always delete the cookie, even if session deletion failed
     deleteCookie(c, AUTH_COOKIE, {
       path: "/",
       httpOnly: true,
