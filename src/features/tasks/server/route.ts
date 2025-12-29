@@ -14,6 +14,10 @@ import { ActivityAction, EntityType } from "@/features/activity/types";
 import { createTaskSchema } from "../schemas";
 import { TaskStatus, TaskPriority, IssueType, Resolution } from "../types";
 
+// Configure route for Vercel - increase body size limit for file uploads
+export const runtime = 'nodejs';
+export const maxDuration = 60; // Maximum execution time for Pro plan (10s for Hobby)
+
 /**
  * Generate a human-readable batch ID
  * Format: PROJECTNAME_YYYYMMDD_HHMMSS_XXX

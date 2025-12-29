@@ -25,11 +25,22 @@ import clients from "@/features/clients/server/route";
 
 const app = new Hono().basePath("/api");
 
-// Increase body size limit for bulk uploads (10MB)
+// Body size limit configuration
+// Note: Vercel limits are 4.5MB (Hobby), 10MB (Pro), 50MB (Enterprise)
+// Set conservatively to avoid 413 errors
+const MAX_BODY_SIZE = process.env.VERCEL_ENV 
+  ? 4 * 1024 * 1024   // 4MB for Vercel (under Hobby plan limit)
+  : 10 * 1024 * 1024; // 10MB for local development
+
 app.use("*", bodyLimit({
-  maxSize: 10 * 1024 * 1024, // 10MB in bytes
+  maxSize: MAX_BODY_SIZE,
   onError: (c) => {
-    return c.text("Payload too large. Maximum size is 10MB.", 413);
+    const maxSizeMB = (MAX_BODY_SIZE / (1024 * 1024)).toFixed(1);
+    return c.json({ 
+      error: `File too large. Maximum size is ${maxSizeMB}MB.`,
+      details: "Please reduce file size or split into smaller files.",
+      maxSizeBytes: MAX_BODY_SIZE
+    }, 413);
   },
 }));
 

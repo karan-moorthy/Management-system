@@ -30,15 +30,17 @@ const nextConfig = {
     return config;
   },
   
-  // Increase body size limit for file uploads
+  // IMPORTANT: Vercel body size limits
+  // Hobby: 4.5MB, Pro: 10MB, Enterprise: 50MB
+  // Headers don't override Vercel's limits - use bodyLimit middleware instead
   async headers() {
     return [
       {
-        source: '/api/tasks/upload-excel',
+        source: '/api/:path*',
         headers: [
           {
-            key: 'Content-Length',
-            value: '104857600', // 100MB in bytes
+            key: 'X-Body-Size-Warning',
+            value: 'Max 4MB on Vercel Hobby plan',
           },
         ],
       },

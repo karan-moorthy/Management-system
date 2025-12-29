@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { deleteCookie, setCookie } from "hono/cookie";
+import { deleteCookie, setCookie, getCookie } from "hono/cookie";
 import { compare, hash } from "bcryptjs";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -126,15 +126,25 @@ const app = new Hono()
   .post("/logout", sessionMiddleware, async (c) => {
     const user = c.get("user");
     
-    // Get session token from cookie
-    const sessionToken = c.req.raw.headers.get("cookie")?.split(`${AUTH_COOKIE}=`)[1]?.split(";")[0];
+    // Get session token from cookie using getCookie helper
+    const sessionToken = getCookie(c, AUTH_COOKIE);
 
     if (sessionToken) {
       // Delete session from database
-      await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+      try {
+        await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+      } catch (error) {
+        console.error('Session deletion error:', error);
+        // Continue even if session deletion fails
+      }
     }
 
-    deleteCookie(c, AUTH_COOKIE);
+    deleteCookie(c, AUTH_COOKIE, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? "strict" : "lax",
+    });
 
     return c.json({ success: true });
   })
