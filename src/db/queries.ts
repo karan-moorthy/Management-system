@@ -8,7 +8,7 @@ import { AUTH_COOKIE } from '@/features/auth/constants';
  * Get current user from session
  */
 export async function getCurrentUser() {
-  const sessionCookie = await cookies().get(AUTH_COOKIE);
+  const sessionCookie = (await cookies()).get(AUTH_COOKIE);
   
   if (!sessionCookie?.value) {
     return null;
