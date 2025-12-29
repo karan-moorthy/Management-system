@@ -6,7 +6,7 @@ import { AUTH_COOKIE } from "./constants";
 
 export const getCurrent = async () => {
   try {
-    const sessionCookie = await cookies().get(AUTH_COOKIE);
+    const sessionCookie = (await cookies()).get(AUTH_COOKIE);
 
     if (!sessionCookie?.value) {
       return null;
