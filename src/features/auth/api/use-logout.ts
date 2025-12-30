@@ -20,8 +20,8 @@ export const useLogout = () => {
       if (!response.ok) {
         let errorMsg = 'Failed to log out';
         try {
-          const error = await response.json();
-          errorMsg = error.error || error.message || errorMsg;
+          const error = await response.json() as any;
+          errorMsg = error?.error || error?.message || errorMsg;
         } catch {
           // If JSON parsing fails, use default message
         }
