@@ -231,8 +231,13 @@ const app = new Hono().post("/", sessionMiddleware, async (c) => {
       throw error;
     }
   } catch (error) {
-    console.error("Bulk upload error:", error);
-    return c.json({ error: "Failed to process file" }, 500);
+    console.error("[Bulk Upload] Fatal error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return c.json({ 
+      error: "Failed to process file",
+      details: errorMessage,
+      success: false
+    }, 500);
   }
 });
 

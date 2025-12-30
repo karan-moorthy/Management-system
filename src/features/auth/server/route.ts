@@ -124,45 +124,85 @@ const app = new Hono()
     return c.json({ success: true });
   })
   .post("/logout", async (c) => {
-    // Get session token from cookie - don't use sessionMiddleware as it may fail
-    const sessionToken = getCookie(c, AUTH_COOKIE);
+    try {
+      console.log('[Logout] Starting logout process');
+      
+      // Get session token from cookie - don't use sessionMiddleware as it may fail
+      const sessionToken = getCookie(c, AUTH_COOKIE);
+      console.log('[Logout] Session token present:', !!sessionToken);
 
-    if (sessionToken) {
-      // Delete session from database
-      try {
-        await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
-        console.log('Session deleted successfully:', sessionToken);
-      } catch (error) {
-        console.error('Session deletion error:', error);
-        // Continue even if session deletion fails
+      if (sessionToken) {
+        // Delete session from database
+        try {
+          await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+          console.log('[Logout] Session deleted successfully');
+        } catch (dbError) {
+          console.error('[Logout] Database deletion error:', dbError);
+          // Continue even if session deletion fails - cookie deletion is more important
+        }
       }
+
+      // Always delete the cookie, even if session deletion failed
+      deleteCookie(c, AUTH_COOKIE, {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? "strict" : "lax",
+      });
+
+      console.log('[Logout] Logout successful');
+      return c.json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+      console.error('[Logout] Unexpected error:', error);
+      // Even if something fails, try to delete the cookie and return success
+      try {
+        deleteCookie(c, AUTH_COOKIE, {
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? "strict" : "lax",
+        });
+      } catch (cookieError) {
+        console.error('[Logout] Cookie deletion error:', cookieError);
+      }
+      return c.json({ 
+        success: true, 
+        message: "Logged out (with errors)",
+        warning: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
-
-    // Always delete the cookie, even if session deletion failed
-    deleteCookie(c, AUTH_COOKIE, {
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? "strict" : "lax",
-    });
-
-    return c.json({ success: true });
   })
   .patch("/profile", sessionMiddleware, zValidator("json", updateProfileSchema), async (c) => {
-    const user = c.get("user");
-    const updates = c.req.valid("json");
+    try {
+      const user = c.get("user");
+      const updates = c.req.valid("json");
 
-    // Update user profile
-    const [updatedUser] = await db
-      .update(users)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, user.id))
-      .returning();
+      console.log('[Profile Update] Updating profile for user:', user.id);
 
-    return c.json({ data: updatedUser });
+      // Update user profile
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id))
+        .returning();
+
+      if (!updatedUser) {
+        console.error('[Profile Update] User not found:', user.id);
+        return c.json({ error: "User not found" }, 404);
+      }
+
+      console.log('[Profile Update] Profile updated successfully');
+      return c.json({ success: true, data: updatedUser });
+    } catch (error) {
+      console.error('[Profile Update] Error:', error);
+      return c.json({ 
+        error: "Failed to update profile",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }, 500);
+    }
   });
 
 export default app;
