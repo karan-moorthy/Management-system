@@ -83,14 +83,22 @@ const app = new Hono()
         }
 
         // Insert the new user
-        const [newUser] = await db
+        await db
           .insert(users)
-          .values(insertValues)
-          .returning();
+          .values(insertValues);
 
-        // Convert to plain object to avoid #state serialization error
-        const plainUser = JSON.parse(JSON.stringify(newUser));
-        return c.json({ data: plainUser });
+        // Fetch the created user with separate SELECT to avoid #state error
+        const [newUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, insertValues.email))
+          .limit(1);
+
+        if (!newUser) {
+          throw new Error("Failed to create user");
+        }
+
+        return c.json({ data: newUser });
       } catch (error: any) {
         // Drizzle wraps PostgreSQL errors in error.cause
         const pgError = error.cause || error;
@@ -164,14 +172,22 @@ const app = new Hono()
       try {
         const { name } = c.req.valid("json");
 
-        const [designation] = await db
+        await db
           .insert(customDesignations)
-          .values({ name })
-          .returning();
+          .values({ name });
 
-        // Convert to plain object to avoid #state serialization error
-        const plainDesignation = JSON.parse(JSON.stringify(designation));
-        return c.json({ data: plainDesignation });
+        // Fetch the created designation with separate SELECT to avoid #state error
+        const [designation] = await db
+          .select()
+          .from(customDesignations)
+          .where(eq(customDesignations.name, name))
+          .limit(1);
+
+        if (!designation) {
+          throw new Error("Failed to create designation");
+        }
+
+        return c.json({ data: designation });
       } catch (error: any) {
         // Check for duplicate key error (PostgreSQL error code 23505)
         if (error.cause?.code === '23505' || error.code === '23505') {
@@ -205,14 +221,22 @@ const app = new Hono()
       try {
         const { name } = c.req.valid("json");
 
-        const [department] = await db
+        await db
           .insert(customDepartments)
-          .values({ name })
-          .returning();
+          .values({ name });
 
-        // Convert to plain object to avoid #state serialization error
-        const plainDepartment = JSON.parse(JSON.stringify(department));
-        return c.json({ data: plainDepartment });
+        // Fetch the created department with separate SELECT to avoid #state error
+        const [department] = await db
+          .select()
+          .from(customDepartments)
+          .where(eq(customDepartments.name, name))
+          .limit(1);
+
+        if (!department) {
+          throw new Error("Failed to create department");
+        }
+
+        return c.json({ data: department });
       } catch (error: any) {
         // Check for duplicate key error (PostgreSQL error code 23505)
         if (error.cause?.code === '23505' || error.code === '23505') {
