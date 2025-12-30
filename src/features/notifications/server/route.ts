@@ -69,21 +69,8 @@ const app = new Hono()
       const user = c.get("user");
       console.log('[Mark All Read] User:', user.id, 'Marking all as read');
 
-      // Get count of unread notifications
-      const unreadCount = await db
-        .select({ count: sql`count(*)` })
-        .from(notifications)
-        .where(
-          and(
-            eq(notifications.userId, user.id),
-            eq(notifications.isRead, "false")
-          )
-        );
-
-      console.log('[Mark All Read] Found', unreadCount[0]?.count || 0, 'unread notifications');
-
-      // Update all unread notifications to read
-      await db
+      // Update all unread notifications to read - just execute without storing result
+      const updateQuery = db
         .update(notifications)
         .set({
           isRead: "true",
@@ -96,12 +83,14 @@ const app = new Hono()
           )
         );
 
+      // Execute the query but don't store the result to avoid #state error
+      await updateQuery;
+
       console.log('[Mark All Read] Successfully marked all as read');
 
       return c.json({ 
         success: true, 
-        message: "All notifications marked as read",
-        count: Number(unreadCount[0]?.count || 0)
+        message: "All notifications marked as read"
       });
     } catch (error) {
       console.error("[Mark All Read] Error:", error);
@@ -123,25 +112,19 @@ const app = new Hono()
       const user = c.get("user");
       console.log('[Clear All Notifications] User:', user.id, 'Starting clear all');
 
-      // Get count before deletion for logging
-      const beforeCount = await db
-        .select({ count: sql`count(*)` })
-        .from(notifications)
-        .where(eq(notifications.userId, user.id));
-
-      console.log('[Clear All Notifications] Found', beforeCount[0]?.count || 0, 'notifications to delete');
-
-      // Delete all notifications for this user
-      await db
+      // Delete all notifications for this user - just execute without storing result
+      const deleteQuery = db
         .delete(notifications)
         .where(eq(notifications.userId, user.id));
+
+      // Execute the query but don't store the result to avoid #state error
+      await deleteQuery;
 
       console.log('[Clear All Notifications] Successfully deleted all notifications');
 
       return c.json({ 
         success: true, 
-        message: "All notifications cleared",
-        count: Number(beforeCount[0]?.count || 0)
+        message: "All notifications cleared"
       });
     } catch (error) {
       console.error("[Clear All Notifications] Error:", error);
