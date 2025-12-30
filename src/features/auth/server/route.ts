@@ -186,15 +186,21 @@ const app = new Hono()
 
       console.log('[Profile Update] Updating profile for user:', user.id);
 
-      // Update user profile
-      const [updatedUser] = await db
+      // Update user profile - execute without .returning() to avoid #state error
+      await db
         .update(users)
         .set({
           ...updates,
           updatedAt: new Date(),
         })
+        .where(eq(users.id, user.id));
+
+      // Fetch the updated user separately to avoid #state serialization issue
+      const [updatedUser] = await db
+        .select()
+        .from(users)
         .where(eq(users.id, user.id))
-        .returning();
+        .limit(1);
 
       if (!updatedUser) {
         console.error('[Profile Update] User not found:', user.id);
