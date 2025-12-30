@@ -8,6 +8,8 @@ import { z } from "zod";
 import { loginSchema, registerSchema } from "../schemas";
 import { AUTH_COOKIE } from "../constants";
 import { sessionMiddleware } from "@/lib/session-middleware";
+import { getAuthCookieConfig, logCookieConfig } from "@/lib/cookie-config";
+import { deleteUserSessions, deleteSession } from "@/lib/session-cleanup";
 import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -68,6 +70,18 @@ const app = new Hono()
         return c.json({ error: "Invalid email or password" }, 401);
       }
 
+      // CRITICAL: Delete all existing sessions for this user before creating new one
+      // This prevents stale sessions from interfering with subsequent logouts
+      try {
+        const deletedSessions = await db
+          .delete(sessions)
+          .where(eq(sessions.userId, user.id));
+        console.log('[Login] Cleaned up existing sessions for user:', user.id);
+      } catch (cleanupError) {
+        console.warn('[Login] Session cleanup warning:', cleanupError);
+        // Continue even if cleanup fails - not critical for login to succeed
+      }
+
       // Create session
       const sessionToken = randomBytes(32).toString("hex");
       const expiresAt = new Date();
@@ -79,27 +93,9 @@ const app = new Hono()
         expires: expiresAt,
       });
 
-      const isProd = process.env.NODE_ENV === 'production';
-      const cookieOptions: any = {
-        path: "/",
-        httpOnly: true,
-        secure: isProd, // HTTPS only in production
-        sameSite: "lax", // CRITICAL: Use 'lax' for both dev and prod to ensure consistent behavior
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      };
-
-      // Add explicit domain in production to prevent subdomain issues
-      if (isProd && process.env.NEXT_PUBLIC_APP_URL) {
-        try {
-          const url = new URL(process.env.NEXT_PUBLIC_APP_URL);
-          // Only set domain if it's not localhost/IP
-          if (!url.hostname.match(/^(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)$/)) {
-            cookieOptions.domain = url.hostname;
-          }
-        } catch (e) {
-          console.warn('[Login] Failed to parse NEXT_PUBLIC_APP_URL for cookie domain:', e);
-        }
-      }
+      // Use standardized cookie configuration
+      const cookieOptions = getAuthCookieConfig({ includeMaxAge: true });
+      logCookieConfig('set', cookieOptions);
 
       setCookie(c, AUTH_COOKIE, sessionToken, cookieOptions);
 
@@ -150,39 +146,23 @@ const app = new Hono()
       // Get session token from cookie - don't use sessionMiddleware as it may fail
       const sessionToken = getCookie(c, AUTH_COOKIE);
       console.log('[Logout] Session token present:', !!sessionToken);
+      console.log('[Logout] Session token (first 8 chars):', sessionToken ? sessionToken.substring(0, 8) : 'none');
 
       if (sessionToken) {
-        // Delete session from database
+        // Delete session from database using helper
         try {
-          await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
-          console.log('[Logout] Session deleted successfully');
+          await deleteSession(sessionToken);
         } catch (dbError) {
           console.error('[Logout] Database deletion error:', dbError);
           // Continue even if session deletion fails - cookie deletion is more important
         }
+      } else {
+        console.warn('[Logout] No session token found in cookie');
       }
 
-      // Always delete the cookie, even if session deletion failed
-      // CRITICAL: Cookie options MUST exactly match those used in setCookie
-      const isProd = process.env.NODE_ENV === 'production';
-      const cookieOptions: any = {
-        path: "/",
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "lax", // MUST match login (changed from strict/lax conditional)
-      };
-
-      // Add explicit domain in production (MUST match login)
-      if (isProd && process.env.NEXT_PUBLIC_APP_URL) {
-        try {
-          const url = new URL(process.env.NEXT_PUBLIC_APP_URL);
-          if (!url.hostname.match(/^(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)$/)) {
-            cookieOptions.domain = url.hostname;
-          }
-        } catch (e) {
-          console.warn('[Logout] Failed to parse NEXT_PUBLIC_APP_URL for cookie domain:', e);
-        }
-      }
+      // Always delete the cookie using standardized configuration
+      const cookieOptions = getAuthCookieConfig({ forDeletion: true });
+      logCookieConfig('delete', cookieOptions);
 
       deleteCookie(c, AUTH_COOKIE, cookieOptions);
 

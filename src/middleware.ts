@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { AUTH_COOKIE } from '@/features/auth/constants';
+import { getAuthCookieConfig } from '@/lib/cookie-config';
 
 // Routes that require authentication
 const protectedRoutes = [
@@ -41,18 +42,14 @@ export function middleware(request: NextRequest) {
   if (pathname === '/api/auth/logout' || (!isAuthenticated && sessionToken)) {
     const response = NextResponse.next();
     
-    // Force clear cookie at edge level
-    const isProd = process.env.NODE_ENV === 'production';
+    // Use standardized cookie configuration for deletion
+    const cookieOptions = getAuthCookieConfig({ forDeletion: true });
     
-    // Set cookie with immediate expiration
     response.cookies.set({
       name: AUTH_COOKIE,
       value: '',
       expires: new Date(0),
-      path: '/',
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
+      ...cookieOptions,
     });
 
     return response;
