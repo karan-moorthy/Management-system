@@ -15,6 +15,9 @@ const isRemoteDb = process.env.DATABASE_URL.includes('.supabase.co') ||
                    process.env.DATABASE_URL.includes('.neon.tech') ||
                    process.env.DATABASE_URL.includes('.railway.app');
 
+// Disable connection during build time to avoid "Command exited with 1" errors on Vercel
+const isBuilding = process.env.NEXT_PHASE === 'phase-production-build';
+
 const client = postgres(process.env.DATABASE_URL, {
   max: process.env.NODE_ENV === 'production' ? 15 : 5,  // Production: 15 connections, Dev: 5 (enough for 10K users)
   idle_timeout: 20, // Close idle connections after 20 seconds
@@ -23,6 +26,8 @@ const client = postgres(process.env.DATABASE_URL, {
   max_lifetime: 60 * 5, // Max connection lifetime: 5 minutes (prevents stale connections)
   onnotice: () => {}, // Suppress notices
   ssl: isRemoteDb ? 'require' : false, // Only use SSL for remote databases
+  // Don't actually connect during build phase
+  connection: isBuilding ? { application_name: 'build' } : undefined,
 });
 
 // Create and export the database instance
