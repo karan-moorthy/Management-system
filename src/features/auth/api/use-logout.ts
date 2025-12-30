@@ -57,7 +57,6 @@ export const useLogout = () => {
     },
     onSuccess: () => {
       console.log('[Logout] Success - redirecting to sign-in');
-      toast.success("Logged out.");
       
       // Clear all cached data immediately
       try {
@@ -68,10 +67,8 @@ export const useLogout = () => {
         console.error('[Logout] Cache clear error:', e);
       }
       
-      // Force hard redirect to sign-in page
-      setTimeout(() => {
-        window.location.href = "/sign-in";
-      }, 100);
+      // Use replace to avoid adding to history and redirect immediately
+      window.location.replace("/sign-in");
     },
     onError: (error) => {
       console.error('[Logout Error]:', error);
@@ -85,12 +82,8 @@ export const useLogout = () => {
         console.error('[Logout] Cache clear error:', e);
       }
       
-      toast.error("Logging out...");
-      
-      // Force redirect even on error
-      setTimeout(() => {
-        window.location.href = "/sign-in";
-      }, 500);
+      // Force redirect even on error (no toast to avoid blocking)
+      window.location.replace("/sign-in");
     },
   });
 
