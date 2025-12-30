@@ -14,10 +14,23 @@ export const useLogout = () => {
 
   const mutation = useMutation<ResponseType, Error>({
     mutationFn: async () => {
+      // Set a fallback that ALWAYS redirects after 3 seconds, no matter what
+      const fallbackRedirect = setTimeout(() => {
+        console.warn('[Logout] Fallback redirect triggered');
+        try {
+          queryClient.clear();
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (e) {
+          console.error('[Logout] Fallback cache clear error:', e);
+        }
+        window.location.replace("/sign-in");
+      }, 3000);
+
       try {
         // Add timeout to prevent hanging
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
         
         const response = await fetch('/api/auth/logout', {
           method: 'POST',
@@ -29,6 +42,7 @@ export const useLogout = () => {
         });
         
         clearTimeout(timeoutId);
+        clearTimeout(fallbackRedirect); // Cancel fallback if request succeeds
         
         // Defensive JSON parsing
         if (!response.ok) {
@@ -44,12 +58,11 @@ export const useLogout = () => {
         
         return await response.json();
       } catch (error: any) {
+        clearTimeout(fallbackRedirect); // Cancel fallback, let onSuccess/onError handle it
+        
         // If timeout or network error, still proceed with logout
         if (error.name === 'AbortError') {
           console.warn('[Logout] Request timeout - proceeding with local logout');
-        }
-        // Don't throw on timeout - let it proceed to onSuccess
-        if (error.name === 'AbortError') {
           return { success: true, message: 'Logged out (timeout)' };
         }
         throw error;
