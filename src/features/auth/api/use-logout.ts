@@ -32,12 +32,21 @@ export const useLogout = () => {
     },
     onSuccess: () => {
       toast.success("Logged out.");
-      router.refresh();
       queryClient.invalidateQueries();
       queryClient.removeQueries({ queryKey: ["current-user-role"] });
+      queryClient.clear(); // Clear all cached data
+      
+      // Force redirect to sign-in page
+      window.location.href = "/sign-in";
     },
-    onError: () => {
-      toast.error("Failed to log out.");
+    onError: (error) => {
+      console.error('[Logout Error]:', error);
+      toast.error(error.message || "Failed to log out.");
+      
+      // Even if logout fails, redirect to sign-in
+      setTimeout(() => {
+        window.location.href = "/sign-in";
+      }, 1500);
     },
   });
 
