@@ -14,39 +14,83 @@ export const useLogout = () => {
 
   const mutation = useMutation<ResponseType, Error>({
     mutationFn: async () => {
-      const response = await client.api.auth.logout.$post();
-      
-      // Defensive JSON parsing
-      if (!response.ok) {
-        let errorMsg = 'Failed to log out';
-        try {
-          const error = await response.json() as any;
-          errorMsg = error?.error || error?.message || errorMsg;
-        } catch {
-          // If JSON parsing fails, use default message
+      try {
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+          credentials: 'include',
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Defensive JSON parsing
+        if (!response.ok) {
+          let errorMsg = 'Failed to log out';
+          try {
+            const error = await response.json() as any;
+            errorMsg = error?.error || error?.message || errorMsg;
+          } catch {
+            // If JSON parsing fails, use default message
+          }
+          throw new Error(errorMsg);
         }
-        throw new Error(errorMsg);
+        
+        return await response.json();
+      } catch (error: any) {
+        // If timeout or network error, still proceed with logout
+        if (error.name === 'AbortError') {
+          console.warn('[Logout] Request timeout - proceeding with local logout');
+        }
+        // Don't throw on timeout - let it proceed to onSuccess
+        if (error.name === 'AbortError') {
+          return { success: true, message: 'Logged out (timeout)' };
+        }
+        throw error;
       }
-      
-      return await response.json();
     },
     onSuccess: () => {
+      console.log('[Logout] Success - redirecting to sign-in');
       toast.success("Logged out.");
-      queryClient.invalidateQueries();
-      queryClient.removeQueries({ queryKey: ["current-user-role"] });
-      queryClient.clear(); // Clear all cached data
       
-      // Force redirect to sign-in page
-      window.location.href = "/sign-in";
+      // Clear all cached data immediately
+      try {
+        queryClient.clear();
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        console.error('[Logout] Cache clear error:', e);
+      }
+      
+      // Force hard redirect to sign-in page
+      setTimeout(() => {
+        window.location.href = "/sign-in";
+      }, 100);
     },
     onError: (error) => {
       console.error('[Logout Error]:', error);
-      toast.error(error.message || "Failed to log out.");
       
-      // Even if logout fails, redirect to sign-in
+      // Even on error, clear local data and redirect
+      try {
+        queryClient.clear();
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        console.error('[Logout] Cache clear error:', e);
+      }
+      
+      toast.error("Logging out...");
+      
+      // Force redirect even on error
       setTimeout(() => {
         window.location.href = "/sign-in";
-      }, 1500);
+      }, 500);
     },
   });
 
