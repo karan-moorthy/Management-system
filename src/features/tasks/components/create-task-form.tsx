@@ -62,11 +62,18 @@ export const CreateTaskForm = ({
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema.omit({ workspaceId: true })),
     defaultValues: {
-      workspaceId,
-      assigneeId: isEmployee ? currentUser?.id : undefined,
-      projectName: undefined,
-      projectId: undefined,
+      workspaceId: workspaceId || "",
+      assigneeId: isEmployee ? (currentUser?.id || "") : "",
+      projectName: "",
+      projectId: "",
       customFields: {},
+      summary: "",
+      description: "",
+      status: TaskStatus.TODO,
+      priority: TaskPriority.MEDIUM,
+      issueType: IssueType.TASK,
+      dueDate: "",
+      estimatedHours: 0,
     },
   });
 
