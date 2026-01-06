@@ -165,11 +165,13 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
       }
 
       // Check if this is an individual task (no project)
-      const isIndividualTask = !movedTask.projectId;
+      // FIX: Also consider workspaceId - if task has workspaceId, it's a workspace task requiring approval
+      const isIndividualTask = !movedTask.projectId && !movedTask.workspaceId;
       console.log('🔍 Task move debug:', {
         taskId: movedTask.id,
         summary: movedTask.summary,
         projectId: movedTask.projectId,
+        workspaceId: movedTask.workspaceId,
         isIndividualTask,
         isAdmin,
         sourceStatus,
