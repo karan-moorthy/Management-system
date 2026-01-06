@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -59,9 +59,15 @@ export function TaskOverviewForm({
   // Only employees can submit task completion overviews
   const canSubmitOverview = role === MemberRole.EMPLOYEE;
 
-  // If admin tries to open this, close immediately
-  if (isOpen && !canSubmitOverview) {
-    onClose();
+  // Close the form if admin tries to open it (use useEffect to avoid setState during render)
+  useEffect(() => {
+    if (isOpen && !canSubmitOverview) {
+      onClose();
+    }
+  }, [isOpen, canSubmitOverview, onClose]);
+
+  // Don't render if admin tries to access
+  if (!canSubmitOverview) {
     return null;
   }
 
