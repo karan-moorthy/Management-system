@@ -72,7 +72,7 @@ export const CreateTaskForm = ({
       status: TaskStatus.TODO,
       priority: TaskPriority.MEDIUM,
       issueType: IssueType.TASK,
-      dueDate: "",
+      dueDate: undefined,
       estimatedHours: 0,
     },
   });
