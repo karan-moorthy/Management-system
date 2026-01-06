@@ -17,6 +17,7 @@ import { usePermissionContext } from "@/components/providers/permission-provider
 import { MemberRole } from "@/features/members/types";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { useGetDefaultWorkflow } from "../api/use-workflows";
+import { useCurrent } from "@/features/auth/api/use-current";
 
 import { Task, TaskStatus } from "../types";
 import "./kanban-optimizations.css";
@@ -51,6 +52,7 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
   const { role } = usePermissionContext();
   const isAdmin = role === MemberRole.ADMIN || role === MemberRole.PROJECT_MANAGER;
   const workspaceId = useWorkspaceId();
+  const { data: currentUser } = useCurrent();
   
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -164,14 +166,26 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
         return;
       }
 
-      // Check if this is an individual task (no project)
-      // FIX: Also consider workspaceId - if task has workspaceId, it's a workspace task requiring approval
-      const isIndividualTask = !movedTask.projectId && !movedTask.workspaceId;
+      // Determine if this is an individual task (employee's own task that they created)
+      // Individual task criteria:
+      // 1. No projectId (not part of a project)
+      // 2. Created by the current user (creatorId matches userId)
+      // 3. Assigned to the current user (assigneeId matches userId)
+      // If ANY of these fail, it's an admin-assigned task requiring approval
+      const isOwnTask = currentUser && 
+                        movedTask.creatorId === currentUser.id && 
+                        movedTask.assigneeId === currentUser.id;
+      const isIndividualTask = !movedTask.projectId && isOwnTask;
+      
       console.log('🔍 Task move debug:', {
         taskId: movedTask.id,
         summary: movedTask.summary,
         projectId: movedTask.projectId,
         workspaceId: movedTask.workspaceId,
+        creatorId: movedTask.creatorId,
+        assigneeId: movedTask.assigneeId,
+        currentUserId: currentUser?.id,
+        isOwnTask,
         isIndividualTask,
         isAdmin,
         sourceStatus,
