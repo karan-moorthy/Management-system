@@ -159,9 +159,12 @@ const app = new Hono()
         console.log("Invitation created:", invitation.id);
 
         // Generate invitation link
-        const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/client/accept?token=${token}`;
+        const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client/accept?token=${token}`;
+        
+        console.log("Generated invite link:", inviteLink);
 
         // Send email notification
+        let emailSent = false;
         try {
           const emailService = createEmailService();
           
@@ -178,6 +181,7 @@ const app = new Hono()
             from: process.env.EMAIL_FROM || 'PMS Team <noreply@yourdomain.com>',
           });
           
+          emailSent = true;
           console.log(`✅ Invitation email sent to ${email}`);
         } catch (emailError) {
           // Log error but don't fail the invitation creation
@@ -187,8 +191,12 @@ const app = new Hono()
 
         return c.json({
           data: {
-            ...invitation,
+            id: invitation.id,
+            email: invitation.email,
+            token: token, // Always return token for manual link generation
             inviteLink,
+            emailSent,
+            expiresAt: invitation.expiresAt,
           },
         });
       } catch (error) {

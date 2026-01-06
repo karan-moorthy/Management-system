@@ -60,7 +60,12 @@ export function InviteClientModal({
     },
   });
 
+  // Debug modal props
+  console.log('InviteClientModal rendered:', { projectId, projectName, workspaceId, isOpen });
+
   const onSubmit = (values: InviteFormValues) => {
+    console.log('Form submitted:', values);
+    
     sendInvitation(
       {
         email: values.email,
@@ -69,10 +74,32 @@ export function InviteClientModal({
       },
       {
         onSuccess: (data) => {
+          console.log('Invitation response:', data);
+          
+          // Generate link from token
           const baseUrl = window.location.origin;
-          const link = `${baseUrl}/client/accept?token=${data.data.token}`;
+          const token = data.data.token;
+          
+          if (!token) {
+            toast.error('Failed to generate invitation token');
+            console.error('No token in response:', data);
+            return;
+          }
+          
+          const link = `${baseUrl}/client/accept?token=${token}`;
           setInvitationLink(link);
           setInvitedEmail(values.email);
+          
+          // Show email status
+          if (data.data.emailSent === false) {
+            toast.warning('Invitation created but email failed to send. Please copy the link manually.');
+          } else {
+            toast.success('Invitation sent successfully!');
+          }
+        },
+        onError: (error) => {
+          console.error('Invitation error:', error);
+          toast.error(error.message || 'Failed to send invitation');
         },
       }
     );

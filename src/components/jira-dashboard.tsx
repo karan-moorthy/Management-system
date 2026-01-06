@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { InviteClientModal } from "@/features/clients/components/invite-client-modal";
 import { usePermissionContext } from "@/components/providers/permission-provider";
+import { toast } from "sonner";
 
 const STATUS_COLORS = {
   [TaskStatus.TODO]: "#10b981",
@@ -421,12 +422,19 @@ export const JiraDashboard = () => {
               </Select>
             </div>
 
-            {/* Invite Client Button - only show if user can manage users and project is selected */}
-            {canManageUsers && selectedProject && (
+            {/* Invite Client Button - only show if user can manage users */}
+            {canManageUsers && (
               <div className="space-y-2">
                 <label className="text-sm font-medium invisible">Action</label>
                 <Button 
-                  onClick={() => setIsInviteClientModalOpen(true)}
+                  onClick={() => {
+                    console.log('Invite Client clicked:', { selectedProject, canManageUsers });
+                    if (!selectedProject || selectedProject === "all") {
+                      toast.error("Please select a specific project first");
+                      return;
+                    }
+                    setIsInviteClientModalOpen(true);
+                  }}
                   className="w-full"
                   variant="outline"
                 >
@@ -757,15 +765,30 @@ export const JiraDashboard = () => {
       )}
 
       {/* Client Invitation Modal */}
-      {selectedProject !== "all" && (() => {
+      {isInviteClientModalOpen && selectedProject !== "all" && (() => {
+        console.log('Rendering InviteClientModal:', { 
+          selectedProject, 
+          isInviteClientModalOpen,
+          membersCount: members.length,
+          projectsCount: projects.length
+        });
+        
         const selectedProjectData = projects.find(p => p.id === selectedProject);
-        // Use workspaceId from members data instead of project data to ensure user has access
-        const workspaceId = members.length > 0 ? members[0].workspaceId : null;
+        
+        // Try multiple sources for workspaceId
+        const workspaceId = selectedProjectData?.workspaceId || 
+                           (members.length > 0 ? members[0].workspaceId : null);
         
         if (!workspaceId) {
-          console.error("Cannot open invite modal: workspaceId not found in members", { members: members.slice(0, 2) });
+          console.error("Cannot open invite modal: workspaceId not found", { 
+            selectedProject,
+            selectedProjectData, 
+            members: members.slice(0, 2) 
+          });
           return null;
         }
+        
+        console.log('Opening modal with:', { projectId: selectedProject, workspaceId });
         
         return (
           <InviteClientModal
@@ -773,7 +796,10 @@ export const JiraDashboard = () => {
             projectName={selectedProjectData?.name || "Selected Project"}
             workspaceId={workspaceId}
             isOpen={isInviteClientModalOpen}
-            onClose={() => setIsInviteClientModalOpen(false)}
+            onClose={() => {
+              console.log('Closing InviteClientModal');
+              setIsInviteClientModalOpen(false);
+            }}
           />
         );
       })()}
