@@ -16,7 +16,7 @@ export const useCreateProject = () => {
       const response = await client.api.projects.$post({ form });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to create project" }));
+        const errorData: { error?: string } = await response.json().catch(() => ({ error: "Failed to create project" }));
         throw new Error(errorData.error || "Failed to create project");
       }
 
