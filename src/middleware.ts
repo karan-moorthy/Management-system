@@ -5,7 +5,6 @@ import { getAuthCookieConfig } from '@/lib/cookie-config';
 
 // Routes that require authentication
 const protectedRoutes = [
-  '/',
   '/dashboard',
   '/projects',
   '/tasks',
@@ -13,34 +12,55 @@ const protectedRoutes = [
   '/profiles',
   '/admin',
   '/workspaces',
-  '/report',
 ];
 
 // Routes that should redirect to dashboard if authenticated
 const authRoutes = ['/sign-in', '/sign-up'];
 
+// Public routes that don't need any redirect
+const publicRoutes = ['/', '/client/accept'];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // Skip middleware for public routes
+  if (publicRoutes.some(route => pathname === route)) {
+    return NextResponse.next();
+  }
   
   // Get auth cookie
   const sessionToken = request.cookies.get(AUTH_COOKIE);
   const isAuthenticated = !!sessionToken?.value;
 
   // If authenticated user tries to access auth pages, redirect to dashboard
-  // But only if not already being redirected to avoid loops
   if (isAuthenticated && authRoutes.some(route => pathname.startsWith(route))) {
     const dashboardUrl = new URL('/dashboard', request.url);
     return NextResponse.redirect(dashboardUrl);
   }
 
   // If unauthenticated user tries to access protected routes, redirect to sign-in
-  if (!isAuthenticated && protectedRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+  if (!isAuthenticated && protectedRoutes.some(route => pathname.startsWith(route))) {
+    // Clear any stale cookies before redirecting
     const signInUrl = new URL('/sign-in', request.url);
     signInUrl.searchParams.set('from', pathname);
-    return NextResponse.redirect(signInUrl);
+    
+    const response = NextResponse.redirect(signInUrl);
+    
+    // If there's a cookie but no valid session, clear it
+    if (sessionToken) {
+      const cookieOptions = getAuthCookieConfig({ forDeletion: true });
+      response.cookies.set({
+        name: AUTH_COOKIE,
+        value: '',
+        expires: new Date(0),
+        ...cookieOptions,
+      });
+    }
+    
+    return response;
   }
 
-  // For logout endpoint, ensure cookie is cleared
+  // For logout endpoint or expired sessions, ensure cookie is cleared
   if (pathname === '/api/auth/logout') {
     const response = NextResponse.next();
     
