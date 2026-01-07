@@ -67,9 +67,16 @@ const app = new Hono()
   .patch("/mark-all-read", sessionMiddleware, async (c) => {
     try {
       const user = c.get("user");
+      
+      // Validate user
+      if (!user?.id) {
+        console.error('[Mark All Read] Invalid user session');
+        return c.json({ error: "Unauthorized - Invalid session" }, 401);
+      }
+      
       console.log('[Mark All Read] User:', user.id, 'Marking all as read');
 
-      await db
+      const result = await db
         .update(notifications)
         .set({
           isRead: "true",
@@ -83,15 +90,18 @@ const app = new Hono()
         )
         .returning();
 
-      console.log('[Mark All Read] Successfully marked all as read');
+      console.log('[Mark All Read] Successfully marked', result.length, 'notifications as read');
 
       return c.json({ 
         success: true, 
-        message: "All notifications marked as read"
+        message: "All notifications marked as read",
+        count: result.length
       });
     } catch (error) {
       console.error("[Mark All Read] Error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[Mark All Read] Stack:", errorStack);
       return c.json(
         { 
           success: false, 
@@ -108,32 +118,34 @@ const app = new Hono()
     try {
       console.log('[Clear All Notifications] Starting operation');
       
-      // Validate request method
-      if (c.req.method !== 'DELETE') {
-        return c.json({ error: "Method not allowed" }, 405);
-      }
-
       const user = c.get("user");
       
       // Validate user session
-      if (!user || !user.id) {
+      if (!user?.id) {
         console.error('[Clear All Notifications] Invalid user session');
         return c.json({ error: "Unauthorized - Invalid session" }, 401);
       }
 
       console.log('[Clear All Notifications] User:', user.id, 'Clearing all notifications');
 
-      await sql_client.unsafe(`DELETE FROM notifications WHERE user_id = '${user.id}'`);
+      // Use Drizzle ORM instead of unsafe SQL
+      const result = await db
+        .delete(notifications)
+        .where(eq(notifications.userId, user.id))
+        .returning();
 
-      console.log('[Clear All Notifications] Successfully deleted all notifications');
+      console.log('[Clear All Notifications] Successfully deleted', result.length, 'notifications');
 
       return c.json({ 
         success: true, 
-        message: "All notifications cleared"
+        message: "All notifications cleared",
+        count: result.length
       });
     } catch (error) {
       console.error("[Clear All Notifications] Error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[Clear All Notifications] Stack:", errorStack);
       return c.json(
         { 
           success: false, 
