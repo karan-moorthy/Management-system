@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
-import { db, sql_client } from "@/db";
+import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { sessionMiddleware } from "@/lib/session-middleware";
 
@@ -42,7 +42,7 @@ const app = new Hono()
         .update(notifications)
         .set({
           isRead: "true",
-          readAt: sql`NOW()`,
+          readAt: new Date(),
         })
         .where(
           and(
@@ -80,7 +80,7 @@ const app = new Hono()
         .update(notifications)
         .set({
           isRead: "true",
-          readAt: sql`NOW()`,
+          readAt: new Date(),
         })
         .where(
           and(
@@ -161,10 +161,31 @@ const app = new Hono()
   .delete("/:notificationId", sessionMiddleware, async (c) => {
     try {
       const user = c.get("user");
+      
+      // Validate user
+      if (!user?.id) {
+        console.error('[Delete Notification] Invalid user session');
+        return c.json({ error: "Unauthorized - Invalid session" }, 401);
+      }
+      
       const { notificationId } = c.req.param();
       console.log('[Delete Notification] User:', user.id, 'Notification:', notificationId);
 
-      await sql_client.unsafe(`DELETE FROM notifications WHERE id = '${notificationId}' AND user_id = '${user.id}'`);
+      // Use Drizzle ORM instead of unsafe SQL
+      const result = await db
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.id, notificationId),
+            eq(notifications.userId, user.id)
+          )
+        )
+        .returning();
+
+      if (result.length === 0) {
+        console.warn('[Delete Notification] Notification not found or unauthorized');
+        return c.json({ error: "Notification not found" }, 404);
+      }
 
       console.log('[Delete Notification] Successfully deleted');
       return c.json({ success: true, message: "Notification deleted" });
