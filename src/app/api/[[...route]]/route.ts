@@ -116,9 +116,23 @@ if (process.env.NODE_ENV !== 'test') {
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-export const GET = handle(app);
-export const POST = handle(app);
-export const PATCH = handle(app);
-export const DELETE = handle(app);
+// Wrap Hono handlers to match Next.js 16 signature
+const handler = handle(app);
+
+export async function GET(req: Request, context: any) {
+  return handler(req, context);
+}
+
+export async function POST(req: Request, context: any) {
+  return handler(req, context);
+}
+
+export async function PATCH(req: Request, context: any) {
+  return handler(req, context);
+}
+
+export async function DELETE(req: Request, context: any) {
+  return handler(req, context);
+}
 
 export type AppType = typeof routes;
