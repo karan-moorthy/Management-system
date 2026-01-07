@@ -56,7 +56,15 @@ export const getCurrent = async () => {
 
     return user;
   } catch (error) {
-    console.error('[getCurrent] Error:', error);
+    // During build, Next.js throws errors for routes using cookies() - this is expected
+    if (error instanceof Error && error.message.includes('Dynamic server usage')) {
+      // This is a Next.js build-time message, not a runtime error
+      // Routes will be dynamically rendered, which is correct for authenticated routes
+      return null;
+    }
+    
+    // Log actual runtime errors only
+    console.error('[getCurrent] Runtime error:', error);
     return null;
   }
 };
