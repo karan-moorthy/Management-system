@@ -51,19 +51,15 @@ export const NotificationButton = () => {
   };
 
   const handleNotificationClick = (notification: any, e: React.MouseEvent) => {
-    // If clicking on a long notification, just expand it
-    if (notification.message.length > 100) {
-      toggleExpanded(notification.id, e);
-      // Mark as read
-      if (notification.isRead === "false") {
-        markAsRead(notification.id);
-      }
-      return;
-    }
-
-    // Mark as read
+    // Always mark as read when clicking on any unread notification
     if (notification.isRead === "false") {
       markAsRead(notification.id);
+    }
+
+    // If clicking on a long notification, just expand it (don't navigate)
+    if (notification.message.length > 100) {
+      toggleExpanded(notification.id, e);
+      return;
     }
     
     // Navigate based on notification type
