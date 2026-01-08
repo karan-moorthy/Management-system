@@ -18,7 +18,7 @@ export async function PATCH(
     // Get user from session
     const userResult = await sql_client`
       SELECT u.id 
-      FROM user_sessions s
+      FROM sessions s
       INNER JOIN users u ON s.user_id = u.id
       WHERE s.session_token = ${sessionToken}
       AND s.expires > NOW()

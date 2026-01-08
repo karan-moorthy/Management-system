@@ -42,14 +42,13 @@ export const accounts = pgTable('accounts', {
   userIdx: index('accounts_user_idx').on(table.userId),
 }));
 
-// Sessions table (renamed to avoid conflict with Supabase's auth.sessions)
-export const sessions = pgTable('user_sessions', {
+// Sessions table
+export const sessions = pgTable('sessions', {
   sessionToken: text('session_token').primaryKey(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expires: timestamp('expires').notNull(),
 }, (table) => ({
   userIdx: index('sessions_user_idx').on(table.userId),
-  // Explicitly set schema to public
 }));
 
 // Verification Tokens table

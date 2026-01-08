@@ -54,10 +54,14 @@ const app = new Hono()
     });
   })
   .post("/login", zValidator("json", loginSchema), async (c) => {
+    console.log('[Sign-in] Login attempt started');
+    
     try {
       const { email, password } = c.req.valid("json");
+      console.log('[Sign-in] Credentials validated for email:', email);
 
       // Find user by email
+      console.log('[Sign-in] Querying database for user...');
       const [user] = await db
         .select()
         .from(users)
@@ -65,15 +69,21 @@ const app = new Hono()
         .limit(1);
 
       if (!user || !user.password) {
+        console.log('[Sign-in] User not found or no password');
         return c.json({ error: "Invalid email or password" }, 401);
       }
+
+      console.log('[Sign-in] User found:', user.id);
 
       // Verify password
       const isPasswordValid = await compare(password, user.password);
 
       if (!isPasswordValid) {
+        console.log('[Sign-in] Password invalid');
         return c.json({ error: "Invalid email or password" }, 401);
       }
+
+      console.log('[Sign-in] Password verified successfully');
 
       // CRITICAL: Delete all existing sessions for this user before creating new one
       // This prevents stale sessions from interfering with subsequent logouts
