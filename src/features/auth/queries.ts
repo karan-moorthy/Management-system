@@ -28,16 +28,6 @@ export const getCurrent = async () => {
 
     if (!session) {
       console.warn('[getCurrent] Session not found in database. Token:', sessionCookie.value.substring(0, 10) + '...');
-      
-      // Clear the invalid cookie
-      try {
-        const cookieStore = await cookies();
-        cookieStore.delete(AUTH_COOKIE);
-        console.log('[getCurrent] Cleared invalid session cookie');
-      } catch (err) {
-        console.error('[getCurrent] Failed to clear cookie:', err);
-      }
-      
       return null;
     }
 
