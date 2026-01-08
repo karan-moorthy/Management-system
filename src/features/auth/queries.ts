@@ -26,6 +26,10 @@ export const getCurrent = async () => {
 
     if (!session) {
       console.warn('[getCurrent] Session not found in database');
+      
+      // Clear invalid cookie to prevent redirect loops
+      (await cookies()).delete(AUTH_COOKIE);
+      
       return null;
     }
 
@@ -34,10 +38,12 @@ export const getCurrent = async () => {
     if (session.expires < now) {
       console.warn('[getCurrent] Session expired, cleaning up');
       
-      // Clean up expired session asynchronously (don't await)
-      db.delete(sessions)
+      // Clean up expired session and cookie
+      await db.delete(sessions)
         .where(eq(sessions.sessionToken, sessionCookie.value))
         .catch(err => console.error('[getCurrent] Failed to cleanup expired session:', err));
+      
+      (await cookies()).delete(AUTH_COOKIE);
       
       return null;
     }
@@ -51,6 +57,14 @@ export const getCurrent = async () => {
 
     if (!user) {
       console.warn('[getCurrent] User not found for session');
+      
+      // Clean up orphaned session and cookie
+      await db.delete(sessions)
+        .where(eq(sessions.sessionToken, sessionCookie.value))
+        .catch(err => console.error('[getCurrent] Failed to cleanup orphaned session:', err));
+      
+      (await cookies()).delete(AUTH_COOKIE);
+      
       return null;
     }
 
