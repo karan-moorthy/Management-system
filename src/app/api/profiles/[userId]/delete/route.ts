@@ -31,8 +31,11 @@ export async function POST(
     console.log('[Profile Delete] Session token:', sessionToken ? 'Found' : 'Not found');
 
     if (!sessionToken) {
+      console.error('[Profile Delete] No session token in cookies. Available cookies:', Object.keys(cookies));
       return NextResponse.json({ error: "Unauthorized - No session" }, { status: 401 });
     }
+
+    console.log('[Profile Delete] Looking up session with token:', sessionToken.substring(0, 10) + '...');
 
     // Get user from session
     const sessions = await sql`
@@ -44,6 +47,7 @@ export async function POST(
     console.log('[Profile Delete] Sessions found:', sessions.length);
 
     if (sessions.length === 0) {
+      console.error('[Profile Delete] Session not found or expired. Token:', sessionToken.substring(0, 10) + '...');
       return NextResponse.json({ error: "Unauthorized - Invalid or expired session" }, { status: 401 });
     }
 
