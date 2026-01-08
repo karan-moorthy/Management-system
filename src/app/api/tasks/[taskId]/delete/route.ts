@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import postgres from "postgres";
 import { getCookie } from "hono/cookie";
+import { AUTH_COOKIE } from "@/features/auth/constants";
 
 const sql = postgres(process.env.DATABASE_URL!, {
   max: 10,
@@ -23,7 +24,7 @@ export async function POST(
         return [key, rest.join("=")];
       })
     );
-    const sessionToken = cookies["session-token"];
+    const sessionToken = cookies[AUTH_COOKIE];
 
     console.log('[Task Delete] Session token:', sessionToken ? 'Found' : 'Not found');
 

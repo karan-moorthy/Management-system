@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import postgres from "postgres";
+import { AUTH_COOKIE } from "@/features/auth/constants";
 
 const sql = postgres(process.env.DATABASE_URL!, {
   max: 10,
@@ -26,7 +27,7 @@ export async function POST(
     );
     
     console.log('[Profile Delete] All cookies:', Object.keys(cookies));
-    const sessionToken = cookies["session-token"];
+    const sessionToken = cookies[AUTH_COOKIE];
 
     console.log('[Profile Delete] Session token:', sessionToken ? 'Found' : 'Not found');
 
