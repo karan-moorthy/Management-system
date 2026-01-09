@@ -10,12 +10,15 @@ interface PermissionWrapperProps {
 }
 
 export function PermissionWrapper({ children }: PermissionWrapperProps) {
-  const { data: roleData } = useGetCurrentUserRole();
+  const { data: roleData, isLoading } = useGetCurrentUserRole();
 
-  // Render immediately with default permissions to prevent flickering
-  // The query will update in the background and React will re-render when data arrives
-  const role = (roleData?.role as MemberRole) || MemberRole.MEMBER;
-  const workspaceId = roleData?.workspaceId || "";
+  // Wait for role data to load to prevent showing wrong permissions
+  if (isLoading || !roleData) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  const role = (roleData.role as MemberRole) || MemberRole.MEMBER;
+  const workspaceId = roleData.workspaceId || "";
 
   return (
     <PermissionProvider
