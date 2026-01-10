@@ -163,72 +163,63 @@ const app = new Hono()
             .limit(50);
         }
       } else {
-        // Employees & Team Leads: Return projects where they:
+        // Employees & Team Leads: Return ONLY projects where they:
         // 1. Have tasks assigned, OR
         // 2. Are listed in the project's assignees array
         
-        // Get projects from tasks assigned to user
-        const userTasks = await db
+        console.log(`[Projects] Fetching projects for employee: ${user.id}`);
+        
+        // Get ALL tasks for this user first
+        const allUserTasks = await db
           .select({ projectId: tasks.projectId })
           .from(tasks)
-          .where(
-            and(
-              eq(tasks.assigneeId, user.id),
-              isNotNull(tasks.projectId) // Only tasks with a projectId
-            )
-          )
-          .groupBy(tasks.projectId);
+          .where(eq(tasks.assigneeId, user.id));
         
-        const projectIdsFromTasks = userTasks
+        console.log(`[Projects] Employee ${user.id} - Total tasks:`, allUserTasks.length);
+        
+        // Get projects from tasks assigned to user (exclude null projectIds)
+        const projectIdsFromTasks = allUserTasks
           .map(t => t.projectId)
-          .filter((id): id is string => id !== null);
+          .filter((id): id is string => id !== null && id !== undefined);
         
-        console.log(`[Projects] Employee ${user.id} - projectIdsFromTasks:`, projectIdsFromTasks);
+        // Remove duplicates
+        const uniqueProjectIdsFromTasks = [...new Set(projectIdsFromTasks)];
         
-        // Get projects where user is in assignees array
-        // Handle both null and array cases
-        const projectsWithUser = await db
-          .select({ id: projects.id })
-          .from(projects)
-          .where(
-            sql`(${projects.assignees} IS NOT NULL AND ${projects.assignees}::jsonb ? ${user.id})`
-          );
+        console.log(`[Projects] Employee ${user.id} - Project IDs from tasks:`, uniqueProjectIdsFromTasks);
         
-        const projectIdsFromAssignees = projectsWithUser.map(p => p.id);
+        // Get ALL projects first
+        const allProjects = workspaceId 
+          ? await db.select().from(projects).where(eq(projects.workspaceId, workspaceId))
+          : await db.select().from(projects).limit(50);
         
-        console.log(`[Projects] Employee ${user.id} - projectIdsFromAssignees:`, projectIdsFromAssignees);
+        console.log(`[Projects] Employee ${user.id} - Total projects in workspace:`, allProjects.length);
+        
+        // Filter projects where user is in assignees array
+        const projectIdsFromAssignees = allProjects
+          .filter(project => {
+            if (!project.assignees || !Array.isArray(project.assignees)) {
+              return false;
+            }
+            return (project.assignees as string[]).includes(user.id);
+          })
+          .map(p => p.id);
+        
+        console.log(`[Projects] Employee ${user.id} - Project IDs from assignees:`, projectIdsFromAssignees);
         
         // Combine both sources and remove duplicates
-        const allProjectIds = [...new Set([...projectIdsFromTasks, ...projectIdsFromAssignees])];
+        const allProjectIds = [...new Set([...uniqueProjectIdsFromTasks, ...projectIdsFromAssignees])];
         
-        console.log(`[Projects] Employee ${user.id} - combined project IDs:`, allProjectIds);
+        console.log(`[Projects] Employee ${user.id} - Combined project IDs:`, allProjectIds);
         
         if (allProjectIds.length === 0) {
-          // No projects with assigned tasks or assignee membership
-          console.log(`[Projects] Employee ${user.id} - no projects found`);
+          console.log(`[Projects] Employee ${user.id} - No projects found`);
           return c.json({ data: { documents: [], total: 0 } });
         }
         
-        if (workspaceId) {
-          projectList = await db
-            .select()
-            .from(projects)
-            .where(
-              and(
-                eq(projects.workspaceId, workspaceId),
-                inArray(projects.id, allProjectIds)
-              )
-            )
-            .orderBy(desc(projects.createdAt));
-        } else {
-          projectList = await db
-            .select()
-            .from(projects)
-            .where(inArray(projects.id, allProjectIds))
-            .orderBy(desc(projects.createdAt));
-        }
+        // Get the actual project data
+        projectList = allProjects.filter(p => allProjectIds.includes(p.id));
         
-        console.log(`[Projects] Employee ${user.id} - returning ${projectList.length} projects`);
+        console.log(`[Projects] Employee ${user.id} - Returning ${projectList.length} projects`);
       }
 
       return c.json({ data: { documents: projectList, total: projectList.length } });
