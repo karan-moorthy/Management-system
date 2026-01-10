@@ -108,7 +108,7 @@ export async function POST(
       console.log('[Profile Delete] Deleted notifications:', notifResult.count);
 
       // 3. Clear attendance records
-      const attendanceResult = await sql`DELETE FROM attendance WHERE employee_id = ${userId}`;
+      const attendanceResult = await sql`DELETE FROM attendance WHERE user_id = ${userId}`;
       console.log('[Profile Delete] Deleted attendance:', attendanceResult.count);
 
       // 4. Clear weekly reports
