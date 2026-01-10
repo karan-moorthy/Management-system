@@ -94,15 +94,31 @@ const app = new Hono()
     try {
       const currentUser = c.get("user");
 
-      // Check if user is admin
-      const isAdmin = await isUserAdmin(currentUser.id);
+      // Get user's role
+      const userMembership = await db
+        .select({ role: members.role })
+        .from(members)
+        .where(eq(members.userId, currentUser.id))
+        .limit(1);
+
+      const userRole = userMembership.length > 0 ? userMembership[0].role : null;
 
       // Filter requirements based on user role
-      // Admins see all requirements
+      // Admins and Management see all requirements
       // PMs see only requirements assigned to them
-      const whereCondition = isAdmin 
-        ? undefined 
-        : eq(projectRequirements.projectManagerId, currentUser.id);
+      // Employees and Team Leads see all requirements (read-only)
+      let whereCondition;
+      
+      if (userRole === MemberRole.ADMIN || userRole === MemberRole.MANAGEMENT) {
+        // Admins and Management see everything
+        whereCondition = undefined;
+      } else if (userRole === MemberRole.PROJECT_MANAGER) {
+        // PMs see only their assigned requirements
+        whereCondition = eq(projectRequirements.projectManagerId, currentUser.id);
+      } else {
+        // Employees and Team Leads see all requirements (read-only access)
+        whereCondition = undefined;
+      }
 
       const requirements = await db
         .select({
