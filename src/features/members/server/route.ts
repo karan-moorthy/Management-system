@@ -5,7 +5,7 @@ import { eq, and, inArray } from "drizzle-orm";
 
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { db, sql_client } from "@/db";
-import { members, users, tasks } from "@/db/schema";
+import { members, users, tasks, sessions } from "@/db/schema";
 
 import { getMember } from "../utils";
 import { MemberRole } from "../types";
@@ -259,38 +259,64 @@ const app = new Hono()
     const user = c.get("user");
     const { memberId } = c.req.param();
 
-    const [memberToDelete] = await db
-      .select()
-      .from(members)
-      .where(eq(members.id, memberId))
-      .limit(1);
+    try {
+      const [memberToDelete] = await db
+        .select()
+        .from(members)
+        .where(eq(members.id, memberId))
+        .limit(1);
 
-    if (!memberToDelete) {
-      return c.json({ error: "Member not found" }, 404);
+      if (!memberToDelete) {
+        return c.json({ error: "Member not found" }, 404);
+      }
+
+      const currentMember = await getMember({
+        workspaceId: memberToDelete.workspaceId,
+        userId: user.id,
+      });
+
+      if (!currentMember) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      // RBAC: Only ADMIN and PROJECT_MANAGER can delete members
+      const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
+      if (!allowedRoles.includes(currentMember.role as MemberRole)) {
+        return c.json({ error: "Forbidden: Only admins and project managers can remove members" }, 403);
+      }
+
+      if (memberToDelete.userId === user.id) {
+        return c.json({ error: "Cannot delete yourself" }, 400);
+      }
+
+      console.log(`[Delete Member] Attempting to delete member ${memberId} (userId: ${memberToDelete.userId})`);
+
+      // Step 1: Delete all active sessions for this user (log them out everywhere)
+      const deletedSessions = await db
+        .delete(sessions)
+        .where(eq(sessions.userId, memberToDelete.userId))
+        .returning();
+      
+      console.log(`[Delete Member] Cleared ${deletedSessions.length} active session(s) for user ${memberToDelete.userId}`);
+
+      // Step 2: Remove member from workspace (keeps user account and historical data intact)
+      await db.delete(members).where(eq(members.id, memberId));
+
+      console.log(`[Delete Member] Successfully removed member ${memberId} from workspace. Historical data (tasks, reports, attendance) preserved.`);
+
+      return c.json({ 
+        data: { 
+          id: memberId,
+          sessionsCleared: deletedSessions.length 
+        } 
+      });
+    } catch (error) {
+      console.error("[Delete Member] Error:", error);
+      return c.json({ 
+        error: "Failed to delete member. Please try again or contact support.",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }, 500);
     }
-
-    const currentMember = await getMember({
-      workspaceId: memberToDelete.workspaceId,
-      userId: user.id,
-    });
-
-    if (!currentMember) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    // RBAC: Only ADMIN and PROJECT_MANAGER can delete members
-    const allowedRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER];
-    if (!allowedRoles.includes(currentMember.role as MemberRole)) {
-      return c.json({ error: "Forbidden: Only admins and project managers can remove members" }, 403);
-    }
-
-    if (memberToDelete.userId === user.id) {
-      return c.json({ error: "Cannot delete yourself" }, 400);
-    }
-
-    await sql_client.unsafe(`DELETE FROM members WHERE id = '${memberId}'`);
-
-    return c.json({ data: { id: memberId } });
   })
   .patch(
     "/:memberId",
