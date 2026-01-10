@@ -81,11 +81,6 @@ const app = new Hono()
           title: "New Requirement Assigned",
           message: `You have been assigned a new requirement: "${data.tentativeTitle}" from ${data.customer}`,
           type: "REQUIREMENT_ASSIGNED",
-          metadata: {
-            requirementId: requirement.id,
-            customer: data.customer,
-            dueDate: data.dueDate,
-          },
         });
 
         return c.json({ data: requirement });
