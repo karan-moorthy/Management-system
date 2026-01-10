@@ -183,21 +183,29 @@ const app = new Hono()
           .map(t => t.projectId)
           .filter((id): id is string => id !== null);
         
+        console.log(`[Projects] Employee ${user.id} - projectIdsFromTasks:`, projectIdsFromTasks);
+        
         // Get projects where user is in assignees array
+        // Handle both null and array cases
         const projectsWithUser = await db
           .select({ id: projects.id })
           .from(projects)
           .where(
-            sql`${projects.assignees}::jsonb @> ${JSON.stringify([user.id])}::jsonb`
+            sql`(${projects.assignees} IS NOT NULL AND ${projects.assignees}::jsonb ? ${user.id})`
           );
         
         const projectIdsFromAssignees = projectsWithUser.map(p => p.id);
         
+        console.log(`[Projects] Employee ${user.id} - projectIdsFromAssignees:`, projectIdsFromAssignees);
+        
         // Combine both sources and remove duplicates
         const allProjectIds = [...new Set([...projectIdsFromTasks, ...projectIdsFromAssignees])];
         
+        console.log(`[Projects] Employee ${user.id} - combined project IDs:`, allProjectIds);
+        
         if (allProjectIds.length === 0) {
           // No projects with assigned tasks or assignee membership
+          console.log(`[Projects] Employee ${user.id} - no projects found`);
           return c.json({ data: { documents: [], total: 0 } });
         }
         
@@ -219,6 +227,8 @@ const app = new Hono()
             .where(inArray(projects.id, allProjectIds))
             .orderBy(desc(projects.createdAt));
         }
+        
+        console.log(`[Projects] Employee ${user.id} - returning ${projectList.length} projects`);
       }
 
       return c.json({ data: { documents: projectList, total: projectList.length } });
