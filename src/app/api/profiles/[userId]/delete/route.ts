@@ -140,7 +140,7 @@ export async function POST(
       console.log('[Profile Delete] Updated bugs (removed assignee):', bugResult.count);
 
       // 11. Update requirements to remove project manager
-      const reqResult = await sql`UPDATE requirements SET project_manager_id = NULL WHERE project_manager_id = ${userId}`;
+      const reqResult = await sql`UPDATE project_requirements SET project_manager_id = NULL WHERE project_manager_id = ${userId}`;
       console.log('[Profile Delete] Updated requirements (removed PM):', reqResult.count);
 
       // 12. Delete workspace and member memberships
