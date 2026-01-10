@@ -49,6 +49,8 @@ export const ProjectsClient = () => {
     }
   };
 
+  const projectList = projects?.documents || [];
+
   // Debug logging
   console.log('[Summary Page] Render state:', {
     isLoading,
@@ -67,8 +69,6 @@ export const ProjectsClient = () => {
       </div>
     );
   }
-
-  const projectList = projects?.documents || [];
 
   return (
     <div className="h-full flex flex-col p-6">
