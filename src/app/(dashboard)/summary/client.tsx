@@ -49,6 +49,17 @@ export const ProjectsClient = () => {
     }
   };
 
+  // Debug logging
+  console.log('[Summary Page] Render state:', {
+    isLoading,
+    isLoadingRequirements,
+    canViewRequirements,
+    isAdmin,
+    userRole: permissions.role,
+    projectCount: projectList?.length || 0,
+    requirementCount: requirements?.length || 0
+  });
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
