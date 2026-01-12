@@ -78,21 +78,6 @@ export const BulkProfileUpload = () => {
         "TRUE",
         "EMPLOYEE"
       ],
-      [
-        "Jane Smith",
-        "jane.smith@example.com",
-        "",
-        "+1234567891",
-        "Los Angeles, USA",
-        "manager",
-        "hr",
-        "8",
-        "1988-03-20",
-        "2018-06-15",
-        "Management,Leadership",
-        "FALSE",
-        ""
-      ],
     ];
 
     // Create worksheet data
