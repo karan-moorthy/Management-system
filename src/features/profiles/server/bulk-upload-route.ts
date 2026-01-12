@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import bcrypt from "bcryptjs";
 import * as XLSX from "xlsx";
 import { db } from "@/db";
-import { users, members } from "@/db/schema";
+import { users, members, workspaces } from "@/db/schema";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { or, eq, inArray } from "drizzle-orm";
 import { MemberRole } from "@/features/members/types";
@@ -89,14 +89,19 @@ const app = new Hono().post("/", sessionMiddleware, async (c) => {
       if (row.native) row.native = row.native.toString().trim();
       if (row.designation) row.designation = row.designation.toString().trim();
       if (row.department) row.department = row.department.toString().trim();
+      if (row.role) row.role = row.role.toString().trim().toUpperCase();
       
-      // Skip empty rows
-      if (!row.name || !row.email || !row.password) {
+      // Parse has_login_access (TRUE/FALSE, 1/0, true/false, yes/no)
+      const hasLoginAccess = row.has_login_access !== undefined
+        ? ['TRUE', '1', 'YES', 'Y', true, 1].includes(String(row.has_login_access).toUpperCase())
+        : true; // Default to true for backwards compatibility
+      
+      // Basic required fields
+      if (!row.name || !row.email) {
         const missing = [];
         if (!row.name) missing.push('name');
         if (!row.email) missing.push('email');
-        if (!row.password) missing.push('password');
-        errors.push(`Row ${i + 2}: Missing required fields: ${missing.join(', ')} | Data: name="${row.name}", email="${row.email}", password="${row.password ? '***' : 'empty'}"`);
+        errors.push(`Row ${i + 2}: Missing required fields: ${missing.join(', ')}`);
         continue;
       }
 
@@ -107,15 +112,33 @@ const app = new Hono().post("/", sessionMiddleware, async (c) => {
         continue;
       }
 
-      // Validate password length
-      if (row.password.length < 6) {
-        errors.push(`Row ${i + 2}: Password must be at least 6 characters (current length: ${row.password.length})`);
-        continue;
+      // If login access is enabled, validate password and role
+      if (hasLoginAccess) {
+        if (!row.password) {
+          errors.push(`Row ${i + 2}: Password required when has_login_access is TRUE`);
+          continue;
+        }
+        if (row.password.length < 6) {
+          errors.push(`Row ${i + 2}: Password must be at least 6 characters (current length: ${row.password.length})`);
+          continue;
+        }
+        if (!row.role) {
+          errors.push(`Row ${i + 2}: Role required when has_login_access is TRUE (ADMIN, PROJECT_MANAGER, TEAM_LEAD, EMPLOYEE, MANAGEMENT)`);
+          continue;
+        }
+        // Validate role
+        const validRoles = [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER, MemberRole.TEAM_LEAD, MemberRole.EMPLOYEE, MemberRole.MANAGEMENT];
+        if (!validRoles.includes(row.role as MemberRole)) {
+          errors.push(`Row ${i + 2}: Invalid role "${row.role}". Must be one of: ${validRoles.join(', ')}`);
+          continue;
+        }
       }
 
       try {
-        // Hash password
-        const hashedPassword = await bcrypt.hash(row.password, 10);
+        // Hash password only if login access is enabled
+        const hashedPassword = hasLoginAccess && row.password 
+          ? await bcrypt.hash(row.password, 10) 
+          : null;
 
         // Parse skills if present
         let skills = null;
@@ -161,7 +184,11 @@ const app = new Hono().post("/", sessionMiddleware, async (c) => {
           profileData.skills = skills;
         }
 
-        profiles.push(profileData);
+        profiles.push({
+          ...profileData,
+          hasLoginAccess,
+          role: hasLoginAccess ? row.role : null,
+        });
       } catch (error) {
         errors.push(`Row ${i + 2}: Error processing data`);
       }
@@ -222,7 +249,36 @@ const app = new Hono().post("/", sessionMiddleware, async (c) => {
 
     // Insert profiles in batch
     try {
-      const insertedProfiles = await db.insert(users).values(newProfiles).returning();
+      // Separate profiles data (without hasLoginAccess/role) for users table
+      const userProfiles = newProfiles.map(p => {
+        const { hasLoginAccess, role, ...userData } = p;
+        return userData;
+      });
+
+      const insertedProfiles = await db.insert(users).values(userProfiles).returning();
+
+      // Create memberships for users with login access
+      const [workspace] = await db.select().from(workspaces).limit(1);
+      if (workspace) {
+        const membershipsToCreate = [];
+        
+        for (let i = 0; i < insertedProfiles.length; i++) {
+          const profile = newProfiles[i];
+          const insertedUser = insertedProfiles[i];
+          
+          if (profile.hasLoginAccess && profile.role) {
+            membershipsToCreate.push({
+              userId: insertedUser.id,
+              workspaceId: workspace.id,
+              role: profile.role,
+            });
+          }
+        }
+
+        if (membershipsToCreate.length > 0) {
+          await db.insert(members).values(membershipsToCreate);
+        }
+      }
 
       return c.json({
         success: true,
