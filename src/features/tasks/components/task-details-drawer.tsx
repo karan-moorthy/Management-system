@@ -59,8 +59,11 @@ export function TaskDetailsDrawer({ task, open, onOpenChange }: TaskDetailsDrawe
   const { data: currentUser } = useCurrent();
   const currentUserId = currentUser?.id;
   
-  // Fetch members for assignee dropdown
-  const { data: members } = useGetMembers({ workspaceId: task?.workspaceId });
+  // Fetch ALL members for assignee dropdown (not restricted by employee's project access)
+  const { data: members } = useGetMembers({ 
+    workspaceId: task?.workspaceId,
+    forTaskAssignment: true // Get all employees for assignee dropdown
+  });
   // Only ADMIN and PROJECT_MANAGER can edit task details
   // Employees have view-only access (except Kanban drag-drop which is handled separately)
   const isAdmin = roleData && [MemberRole.ADMIN, MemberRole.PROJECT_MANAGER].includes(roleData.role as MemberRole);

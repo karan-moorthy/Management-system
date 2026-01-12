@@ -4,14 +4,25 @@ import { client } from "@/lib/rpc";
 
 interface useGetMembersProps {
   workspaceId?: string;
+  forTaskAssignment?: boolean; // New flag to get all users for task assignment
 }
 
-export const useGetMembers = ({ workspaceId }: useGetMembersProps = {}) => {
+export const useGetMembers = ({ workspaceId, forTaskAssignment }: useGetMembersProps = {}) => {
   const query = useQuery({
-    queryKey: ["members", workspaceId],
+    queryKey: ["members", workspaceId, forTaskAssignment],
     queryFn: async () => {
+      const queryParams: Record<string, string> = {};
+      
+      if (workspaceId) {
+        queryParams.workspaceId = workspaceId;
+      }
+      
+      if (forTaskAssignment) {
+        queryParams.forTaskAssignment = "true";
+      }
+      
       const response = await client.api.members.$get({
-        query: workspaceId ? { workspaceId } : {},
+        query: queryParams,
       });
 
       if (!response.ok) {

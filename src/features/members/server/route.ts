@@ -103,16 +103,43 @@ const app = new Hono()
   .get(
     "/",
     sessionMiddleware,
-    zValidator("query", z.object({ workspaceId: z.string().optional() })),
+    zValidator("query", z.object({ 
+      workspaceId: z.string().optional(),
+      forTaskAssignment: z.string().optional() // New parameter to get all users for task assignment
+    })),
     async (c) => {
       const user = c.get("user");
-      const { workspaceId } = c.req.valid("query");
+      const { workspaceId, forTaskAssignment } = c.req.valid("query");
 
       // Check if user is admin
       const adminCheck = await isUserAdmin(user.id);
 
       // If no workspaceId provided
       if (!workspaceId) {
+        // For task assignment, always return all users (regardless of role)
+        if (forTaskAssignment === "true") {
+          console.log(`📋 [Task Assignment] Fetching all users for assignee dropdown`);
+          const membersList = await db
+            .select({
+              id: users.id,
+              userId: users.id,
+              workspaceId: users.id, // Placeholder for compatibility
+              role: users.id, // Placeholder
+              createdAt: users.createdAt,
+              updatedAt: users.updatedAt,
+              name: users.name,
+              email: users.email,
+            })
+            .from(users);
+
+          return c.json({
+            data: {
+              documents: membersList,
+              total: membersList.length,
+            },
+          });
+        }
+        
         if (adminCheck) {
           // Admins: Return all users
           const membersList = await db

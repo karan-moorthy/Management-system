@@ -31,8 +31,11 @@ export const EditTaskFormWrapper = ({
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({
     workspaceId: hasValidWorkspace ? workspaceId : "",
   });
+  
+  // Fetch ALL users for task assignment (not restricted by employee's project access)
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({
     workspaceId: hasValidWorkspace ? workspaceId : "",
+    forTaskAssignment: true, // Get all employees for assignee dropdown
   });
 
   const projectOptions = projects?.documents.map((project) => ({
