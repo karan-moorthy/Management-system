@@ -83,20 +83,24 @@ const app = new Hono().post("/", sessionMiddleware, async (c) => {
       
       // Skip empty rows
       if (!row.name || !row.email || !row.password) {
-        errors.push(`Row ${i + 2}: Missing required fields (name, email, password)`);
+        const missing = [];
+        if (!row.name) missing.push('name');
+        if (!row.email) missing.push('email');
+        if (!row.password) missing.push('password');
+        errors.push(`Row ${i + 2}: Missing required fields: ${missing.join(', ')} | Data: name="${row.name}", email="${row.email}", password="${row.password ? '***' : 'empty'}"`);
         continue;
       }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(row.email)) {
-        errors.push(`Row ${i + 2}: Invalid email format`);
+        errors.push(`Row ${i + 2}: Invalid email format: "${row.email}"`);
         continue;
       }
 
       // Validate password length
       if (row.password.length < 6) {
-        errors.push(`Row ${i + 2}: Password must be at least 6 characters`);
+        errors.push(`Row ${i + 2}: Password must be at least 6 characters (current length: ${row.password.length})`);
         continue;
       }
 
