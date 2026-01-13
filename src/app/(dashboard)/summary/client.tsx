@@ -28,15 +28,12 @@ export const ProjectsClient = () => {
     setIsModalOpen(true);
   };
 
-  // Check if user can view requirements (Admin, PM, Management, and Employees)
+  // Check if user can view requirements (Only Admin and PM)
   const canViewRequirements = permissions.role === MemberRole.ADMIN || 
-                               permissions.role === MemberRole.PROJECT_MANAGER ||
-                               permissions.role === MemberRole.MANAGEMENT ||
-                               permissions.role === MemberRole.EMPLOYEE ||
-                               permissions.role === MemberRole.TEAM_LEAD;
+                               permissions.role === MemberRole.PROJECT_MANAGER;
 
   // Check if user is admin (for project creation and requirement addition)
-  const isAdmin = permissions.role === MemberRole.ADMIN || permissions.role === MemberRole.PROJECT_MANAGER;
+  const isAdmin = permissions.role === MemberRole.ADMIN;
 
   const getStatusColor = (status: string) => {
     switch (status) {
